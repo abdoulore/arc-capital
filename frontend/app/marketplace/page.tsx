@@ -98,6 +98,15 @@ export default function MarketplacePage() {
         description="Listings are escrowed before they appear here. Fills settle atomically: USDC to seller, deal shares to buyer."
       />
 
+      {!marketplace.address ? (
+        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
+          <p className="font-semibold">Connect Wallet</p>
+          <p className="mt-1 text-blue-800 dark:text-blue-200">
+            Connect your wallet to create listings, trade deal shares, or manage your orders.
+          </p>
+        </div>
+      ) : null}
+
       <section className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
         {marketplace.transaction.status !== "idle" ? (
           <div className="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">
@@ -146,6 +155,7 @@ export default function MarketplacePage() {
         </div>
       </section>
 
+      {marketplace.address ? (
       <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
         <div className="mb-4">
           <h2 className="font-semibold">Your orders</h2>
@@ -164,7 +174,6 @@ export default function MarketplacePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
-              {!marketplace.address ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>Connect Wallet</td></tr> : null}
               {marketplace.address && yourRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No open orders.</td></tr> : null}
               {yourRows.map((row) => (
                 <tr key={row.id}>
@@ -191,6 +200,12 @@ export default function MarketplacePage() {
           </table>
         </div>
       </section>
+      ) : (
+        <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+          <h2 className="font-semibold">Your orders</h2>
+          <p className="mt-3 text-sm text-[var(--muted)]">Awaiting Live Data</p>
+        </section>
+      )}
 
       <Modal title="Create marketplace listing" open={listingOpen} onClose={() => setListingOpen(false)}>
         <div>
@@ -199,7 +214,7 @@ export default function MarketplacePage() {
               <div className="rounded-md border border-[var(--line)] bg-slate-50 p-4 text-sm dark:bg-slate-900">
                 <p className="font-semibold text-[var(--foreground)]">Wallet required</p>
                 <p className="mt-1 leading-6 text-[var(--muted)]">
-                  Connect Wallet to create a marketplace listing for owned deal shares.
+                  Connect your wallet to create a marketplace listing for owned deal shares.
                 </p>
               </div>
               <WalletGatedButton

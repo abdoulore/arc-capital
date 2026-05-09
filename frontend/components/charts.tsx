@@ -21,7 +21,7 @@ export function YieldChart({ totalYield, history = [] }: { totalYield?: bigint; 
       <div className="mb-4">
         <h2 className="font-semibold">Yield trend</h2>
         <p className="text-sm text-[var(--muted)]">
-          {hasLiveYield ? `${formatTokenAmount(totalYield, 6, "USDC", 2)} currently claimable` : "Connect Wallet"}
+          {hasLiveYield ? `${formatTokenAmount(totalYield, 6, "USDC", 2)} currently claimable` : "Awaiting Live Data"}
         </p>
       </div>
 

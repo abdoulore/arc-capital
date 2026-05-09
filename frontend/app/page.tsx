@@ -140,24 +140,24 @@ export default function DashboardPage() {
         <MetricCard
           label="Total portfolio value"
           value={dashboard.isConnected ? formatTokenAmount(totalPortfolioValue, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail={dashboard.isConnected ? "Wallet balance plus live positions" : "Connect Wallet"}
+          detail={dashboard.isConnected ? "Wallet balance plus live positions" : "Wallet-specific data"}
         />
         <MetricCard
           label="Claimable yield"
           value={dashboard.isConnected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail={dashboard.isConnected ? "Fixed-income and deal revenue available now" : "Connect Wallet"}
+          detail={dashboard.isConnected ? "Fixed-income and deal revenue available now" : "Wallet-specific data"}
         />
         <MetricCard
           label="Available liquidity"
           value={dashboard.isConnected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail={dashboard.isConnected ? "USDC currently in wallet" : "Connect Wallet"}
+          detail={dashboard.isConnected ? "USDC currently in wallet" : "Wallet-specific data"}
         />
       </section>
 
       <section className="mt-6 grid gap-4 md:grid-cols-4">
-        <MetricCard label="Monthly Vault" value={dashboard.isConnected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? "Live share value" : "Connect Wallet"} />
-        <MetricCard label="Fixed Income" value={dashboard.isConnected ? formatTokenAmount(fixedPrincipal, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? `${activeFixedPositions} active positions` : "Connect Wallet"} />
-        <MetricCard label="Deal Holdings" value={dashboard.isConnected ? formatTokenAmount(dealValue, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? `${activeDealHoldings} active holdings` : "Connect Wallet"} />
+        <MetricCard label="Monthly Vault" value={dashboard.isConnected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? "Live share value" : "Wallet-specific data"} />
+        <MetricCard label="Fixed Income" value={dashboard.isConnected ? formatTokenAmount(fixedPrincipal, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? `${activeFixedPositions} active positions` : "Wallet-specific data"} />
+        <MetricCard label="Deal Holdings" value={dashboard.isConnected ? formatTokenAmount(dealValue, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? `${activeDealHoldings} active holdings` : "Wallet-specific data"} />
         <MetricCard label="Monthly Vault TVL" value={typeof monthlyTVL === "bigint" ? formatTokenAmount(monthlyTVL, 6, "USDC", 2) : "Awaiting Live Data"} detail="Live vault assets" />
       </section>
 

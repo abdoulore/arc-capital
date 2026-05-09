@@ -100,9 +100,9 @@ export default function DealsPage() {
             ) : !address ? (
               <div>
                 <div className="mt-4 rounded-md border border-[var(--line)] bg-slate-50 p-4 text-sm dark:bg-slate-900">
-                  <p className="font-semibold text-[var(--foreground)]">Connect Wallet</p>
+                  <p className="font-semibold text-[var(--foreground)]">Wallet required</p>
                   <p className="mt-1 leading-6 text-[var(--muted)]">
-                    Connect Wallet to review investment terms and submit a transaction.
+                    Connect your wallet to review investment terms and submit a transaction.
                   </p>
                 </div>
                 <WalletGatedButton className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">

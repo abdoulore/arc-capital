@@ -117,6 +117,7 @@ export default function VaultsPage() {
     : longTermSuccess
       ? "Success"
       : "Deposit";
+  const walletConnected = Boolean(vault.address);
 
   return (
     <div>
@@ -129,6 +130,15 @@ export default function VaultsPage() {
       {transactionText ? (
         <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
           {transactionText}
+        </div>
+      ) : null}
+
+      {!walletConnected ? (
+        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
+          <p className="font-semibold">Connect Wallet</p>
+          <p className="mt-1 text-blue-800 dark:text-blue-200">
+            Connect your wallet to deposit, withdraw, or configure a fixed-income lock.
+          </p>
         </div>
       ) : null}
 
@@ -158,12 +168,20 @@ export default function VaultsPage() {
           <MetricCard label="Withdrawal window" value={withdrawalWindow.label} detail={withdrawalWindow.detail} />
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
-          <WalletGatedButton onClick={() => setDepositOpen(true)} className="rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
-            Deposit
-          </WalletGatedButton>
-          <WalletGatedButton onClick={() => setWithdrawOpen(true)} className="rounded-md border border-[var(--line)] px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-900">
-            Withdraw
-          </WalletGatedButton>
+          {walletConnected ? (
+            <>
+              <WalletGatedButton onClick={() => setDepositOpen(true)} className="rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                Deposit
+              </WalletGatedButton>
+              <WalletGatedButton onClick={() => setWithdrawOpen(true)} className="rounded-md border border-[var(--line)] px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-900">
+                Withdraw
+              </WalletGatedButton>
+            </>
+          ) : (
+            <WalletGatedButton className="rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+              Connect Wallet
+            </WalletGatedButton>
+          )}
           <button onClick={vault.fundWallet} className="rounded-md border border-[var(--line)] px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-900">
             Get test USDC
           </button>
@@ -182,9 +200,9 @@ export default function VaultsPage() {
                 id="fixed-income-amount"
                 value={fixedAmount}
                 onChange={(event) => setFixedAmount(event.target.value)}
-                disabled={!vault.address}
+                disabled={!walletConnected}
                 className="mt-2 w-full rounded-md border border-[var(--line)] bg-transparent px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[var(--muted)] dark:disabled:bg-slate-900"
-                placeholder={vault.address ? "USDC amount" : "Connect Wallet"}
+                placeholder={walletConnected ? "USDC amount" : "Awaiting wallet connection"}
               />
 
               <div className="mt-5">
@@ -199,7 +217,7 @@ export default function VaultsPage() {
                   step={1}
                   value={selectedDurationIndex}
                   onChange={(event) => setSelectedDurationIndex(Number(event.target.value))}
-                  disabled={!vault.address}
+                  disabled={!walletConnected}
                   className="w-full accent-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
                   aria-label="Select lock duration"
                 />
@@ -209,7 +227,7 @@ export default function VaultsPage() {
                       key={option.duration}
                       type="button"
                       onClick={() => setSelectedDurationIndex(index)}
-                      disabled={!vault.address}
+                      disabled={!walletConnected}
                       className={`rounded-md border px-3 py-2 text-sm font-medium transition ${
                         selectedDurationIndex === index
                           ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200"
@@ -236,7 +254,7 @@ export default function VaultsPage() {
                 <SummaryRow label="Monthly payout estimate" value={estimatedMonthlyYield === undefined ? "Awaiting Live Data" : formatCurrency(estimatedMonthlyYield)} />
                 <SummaryRow label="Projected yearly earnings" value={projectedYearlyYield === undefined ? "Awaiting Live Data" : formatCurrency(projectedYearlyYield)} />
                 <SummaryRow label="Maturity date" value={maturityDateText} />
-                <SummaryRow label="Settlement" value="USDC approval then lock deposit" />
+                <SummaryRow label="Settlement" value="Approve USDC, then confirm deposit" />
               </div>
 
               <WalletGatedButton
