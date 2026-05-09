@@ -1,0 +1,51 @@
+# dependencies
+node_modules/
+frontend/node_modules/
+
+# build outputs
+frontend/.next/
+frontend/out/
+frontend/build/
+artifacts/
+cache/
+typechain-types/
+
+# environment and secrets
+.env
+.env.*
+frontend/.env
+frontend/.env.*
+*.pem
+
+# local app data
+frontend/data/
+data/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# vercel
+.vercel/
+frontend/.vercel/
+
+# typescript
+*.tsbuildinfo
+frontend/next-env.d.ts
+
+.appdata/
+hardhat-node*.log
+
+.appdata/
+hardhat-node*.log
+
+frontend/*.log
+*.log
