@@ -107,14 +107,14 @@ export default function AdminOverviewPage() {
             <CompactMetric label="Withdrawal events" value={formatNumber(userMetrics?.withdrawals ?? 0, 0)} />
             <CompactMetric label="Open listings" value={formatNumber(listings.length, 0)} />
             <CompactMetric label="Monthly vault shares" value={metrics.totalShares ? formatTokenAmount(metrics.totalShares, 6, "shares", 2) : "Awaiting Live Data"} />
-            <CompactMetric label="Monitoring" value="Pending Monitoring" />
+            <CompactMetric label="Monitoring" value="Pending Integration" />
           </div>
         </AdminPanel>
       </div>
 
       <AdminPanel title="Recent platform activity">
         <div className="divide-y divide-[var(--line)]">
-          {[...activity, ...localActivity].length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No admin or local wallet activity recorded yet.</p> : null}
+          {[...activity, ...localActivity].length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
           {[...activity, ...localActivity].slice(0, 8).map((item) => (
             <div key={item.id} className="grid gap-2 py-3 text-sm md:grid-cols-[1fr_auto]">
               <div>

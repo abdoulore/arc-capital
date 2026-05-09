@@ -45,7 +45,7 @@ export default function AdminMarketplacePage() {
         <AdminMetric label="Active listing volume" value={formatTokenAmount(metrics.volume, 6, "USDC", 2)} />
         <AdminMetric label="Active listing shares" value={formatNumber(Number(metrics.shares), 0)} />
         <AdminMetric label="Average listing size" value={formatTokenAmount(metrics.averageTradeSize, 6, "USDC", 2)} />
-        <AdminMetric label="Suspicious activity" value="Pending Monitoring" />
+        <AdminMetric label="Suspicious activity" value="Pending Integration" />
       </div>
       <AdminPanel title="Listings and liquidity">
         <div className="overflow-x-auto">

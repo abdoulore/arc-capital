@@ -72,9 +72,9 @@ export function toDealViews(deals: DealMetadata[]): DealView[] {
       risk: deal.riskLevel ?? "Pending",
       targetRaise: Number(deal.targetRaise ?? 0),
       raised: Number(deal.totalRaised ?? 0),
-      model: deal.revenueModel ?? "Pending admin input",
-      term: deal.payoutSchedule ?? (deal.fundingDeadline ? `Funding until ${deal.fundingDeadline}` : "Pending admin input"),
-      expectedYield: deal.expectedYield ?? "Pending admin input",
+      model: deal.revenueModel ?? "Pending Integration",
+      term: deal.payoutSchedule ?? (deal.fundingDeadline ? `Funding until ${deal.fundingDeadline}` : "Pending Integration"),
+      expectedYield: deal.expectedYield ?? "Pending Integration",
       status,
       closeDate: status === "closed" ? deal.closeDate ?? (deadlineMs ? new Date(deadlineMs).toISOString() : undefined) : deal.closeDate,
     };

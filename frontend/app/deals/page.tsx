@@ -66,8 +66,13 @@ export default function DealsPage() {
 
       <section className="grid gap-5 lg:grid-cols-3">
         {visibleDeals.length === 0 ? (
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-6 text-sm text-[var(--muted)] shadow-sm">
-            No {tab} deals yet.
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-6 shadow-sm lg:col-span-3">
+            <p className="font-semibold">{tab === "open" ? "No open deals available." : "No closed deals yet."}</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              {tab === "open"
+                ? "New opportunities will appear here once they are approved and opened for funding."
+                : "Completed opportunities will move here with their funding and distribution history."}
+            </p>
           </div>
         ) : null}
         {visibleDeals.map((deal) => (

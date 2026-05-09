@@ -112,6 +112,15 @@ export default function DashboardPage() {
         description="Track semi-liquid vault exposure, fixed-income locks, and private deal cash flows in one place."
       />
 
+      {!dashboard.isConnected ? (
+        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
+          <p className="font-semibold">Connect Wallet</p>
+          <p className="mt-1 text-blue-800 dark:text-blue-200">
+            Portfolio value, yield, positions, and activity unlock after wallet connection.
+          </p>
+        </div>
+      ) : null}
+
       {dashboard.error ? (
         <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
           {dashboard.error}
@@ -120,7 +129,7 @@ export default function DashboardPage() {
 
       {showSetupNotice ? (
         <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
-          <p className="font-semibold">No Arc portfolio activity yet</p>
+          <p className="font-semibold">No Activity Yet</p>
           <p className="mt-1 text-blue-800 dark:text-blue-200">
             Fund this wallet with Arc Testnet USDC, confirm the deployed contract addresses are configured, then make a deposit or deal investment.
           </p>
@@ -130,26 +139,26 @@ export default function DashboardPage() {
       <section className="grid gap-4 md:grid-cols-3">
         <MetricCard
           label="Total portfolio value"
-          value={dashboard.isConnected ? formatTokenAmount(totalPortfolioValue, 6, "USDC", 2) : "Connect Wallet"}
-          detail="Wallet balance plus live onchain positions"
+          value={dashboard.isConnected ? formatTokenAmount(totalPortfolioValue, 6, "USDC", 2) : "Awaiting Live Data"}
+          detail={dashboard.isConnected ? "Wallet balance plus live positions" : "Connect Wallet"}
         />
         <MetricCard
           label="Claimable yield"
-          value={dashboard.isConnected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Connect Wallet"}
-          detail="Fixed-income and deal revenue available now"
+          value={dashboard.isConnected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data"}
+          detail={dashboard.isConnected ? "Fixed-income and deal revenue available now" : "Connect Wallet"}
         />
         <MetricCard
           label="Available liquidity"
-          value={dashboard.isConnected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Connect Wallet"}
-          detail="USDC currently in wallet"
+          value={dashboard.isConnected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Awaiting Live Data"}
+          detail={dashboard.isConnected ? "USDC currently in wallet" : "Connect Wallet"}
         />
       </section>
 
       <section className="mt-6 grid gap-4 md:grid-cols-4">
-        <MetricCard label="Monthly Vault" value={dashboard.isConnected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Connect Wallet"} detail="Live share value" />
-        <MetricCard label="Fixed Income" value={dashboard.isConnected ? formatTokenAmount(fixedPrincipal, 6, "USDC", 2) : "Connect Wallet"} detail={`${activeFixedPositions} active positions`} />
-        <MetricCard label="Deal Holdings" value={dashboard.isConnected ? formatTokenAmount(dealValue, 6, "USDC", 2) : "Connect Wallet"} detail={`${activeDealHoldings} active holdings`} />
-        <MetricCard label="Monthly Vault TVL" value={typeof monthlyTVL === "bigint" ? formatTokenAmount(monthlyTVL, 6, "USDC", 2) : "Awaiting Live Data"} detail="Protocol-level onchain assets" />
+        <MetricCard label="Monthly Vault" value={dashboard.isConnected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? "Live share value" : "Connect Wallet"} />
+        <MetricCard label="Fixed Income" value={dashboard.isConnected ? formatTokenAmount(fixedPrincipal, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? `${activeFixedPositions} active positions` : "Connect Wallet"} />
+        <MetricCard label="Deal Holdings" value={dashboard.isConnected ? formatTokenAmount(dealValue, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? `${activeDealHoldings} active holdings` : "Connect Wallet"} />
+        <MetricCard label="Monthly Vault TVL" value={typeof monthlyTVL === "bigint" ? formatTokenAmount(monthlyTVL, 6, "USDC", 2) : "Awaiting Live Data"} detail="Live vault assets" />
       </section>
 
       <section className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
@@ -165,7 +174,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="divide-y divide-[var(--line)]">
-          {dashboard.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No live activity logged yet.</p> : null}
+          {dashboard.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
           {dashboard.activity.slice(0, 6).map((item) => (
             <div key={item.id} className="flex flex-col gap-3 py-4 text-sm md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">

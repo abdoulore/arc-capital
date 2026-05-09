@@ -370,14 +370,14 @@ export default function VaultsPage() {
 }
 
 function getMonthlyVaultApy(summary: MonthlyApySummary | null) {
-  if (!summary) return { value: "Loading", detail: "Reading routed yield history" };
-  if (summary.status === "unavailable") return { value: "Unavailable", detail: "RPC could not return yield history" };
+  if (!summary) return { value: "Awaiting Live Data", detail: "Yield appears after live vault data is available" };
+  if (summary.status === "unavailable") return { value: "Awaiting Live Data", detail: "Yield appears after live vault data is available" };
 
   return {
-    value: formatPercent(Number(summary.apyBps || "0") / 100),
+    value: summary.routedYield === "0" ? "Awaiting Live Data" : formatPercent(Number(summary.apyBps || "0") / 100),
     detail:
       summary.routedYield === "0"
-        ? summary.message
+        ? "Yield appears after treasury distributions are routed to the vault"
         : `Annualized from ${formatTokenAmount(safeBigInt(summary.routedYield), USDC_DECIMALS, "USDC", 2)} routed yield over ${summary.basisDays} days`,
   };
 }

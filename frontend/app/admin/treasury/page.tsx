@@ -78,14 +78,14 @@ export default function AdminTreasuryPage() {
     <div>
       <AdminHeader title="Treasury and distributions" description="Route real wallet-funded yield into vaults and deal contracts. No synthetic yield is created here." />
       <div className="grid gap-4 md:grid-cols-4">
-        <AdminMetric label="Treasury wallet" value={treasuryAddress ? formatAddress(treasuryAddress) : "Awaiting Treasury Connection"} detail="Settlement source" />
+        <AdminMetric label="Treasury wallet" value={treasuryAddress ? formatAddress(treasuryAddress) : "Awaiting Live Data"} detail="Settlement source" />
         <AdminMetric label="Treasury USDC" value={treasuryUsdc !== undefined ? formatTokenAmount(treasuryUsdc, 6, "", 2).trim() : "Loading"} detail="USDC" />
         <AdminMetric label="Monthly vault cash" value={summary ? formatTokenAmount(toBigInt(summary.monthlyVaultBalance), 6, "", 2).trim() : formatUsdc(admin.metrics.monthlyTVL)} detail="USDC" />
         <AdminMetric label="Long-term reserves" value={fixedReserves !== undefined ? formatTokenAmount(fixedReserves, 6, "", 2).trim() : "Loading"} detail="USDC" />
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
-        <AdminMetric label="Total routed yield" value={summary ? formatTokenAmount(toBigInt(summary.totalRoutedYield), 6, "USDC", 2) : "Pending history"} />
-        <AdminMetric label="Total deal revenue" value={summary ? formatTokenAmount(toBigInt(summary.totalDealRevenue), 6, "USDC", 2) : "Pending history"} />
+        <AdminMetric label="Total routed yield" value={summary ? formatTokenAmount(toBigInt(summary.totalRoutedYield), 6, "USDC", 2) : "Awaiting Live Data"} />
+        <AdminMetric label="Total deal revenue" value={summary ? formatTokenAmount(toBigInt(summary.totalDealRevenue), 6, "USDC", 2) : "Awaiting Live Data"} />
         <AdminMetric label="Distribution mode" value="Wallet tx" detail="Requires operator confirmation" />
       </div>
 
@@ -137,7 +137,7 @@ export default function AdminTreasuryPage() {
 
       <AdminPanel title="Distribution history">
         <div className="divide-y divide-[var(--line)]">
-          {!summary || summary.history.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No treasury distributions recorded yet.</p> : null}
+          {!summary || summary.history.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
           {summary?.history.map((item) => (
             <div key={item.id} className="flex flex-col gap-1 py-3 text-sm md:flex-row md:items-center md:justify-between">
               <div>

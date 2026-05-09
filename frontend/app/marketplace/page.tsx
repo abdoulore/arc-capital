@@ -163,7 +163,7 @@ export default function MarketplacePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
-              {!marketplace.address ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>Connect wallet to manage orders.</td></tr> : null}
+              {!marketplace.address ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>Connect Wallet</td></tr> : null}
               {marketplace.address && yourRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No open orders.</td></tr> : null}
               {yourRows.map((row) => (
                 <tr key={row.id}>
@@ -193,9 +193,37 @@ export default function MarketplacePage() {
 
       <Modal title="Create marketplace listing" open={listingOpen} onClose={() => setListingOpen(false)}>
         <div>
-          {dealHoldings.length === 0 ? (
-            <div className="rounded-md border border-[var(--line)] bg-slate-50 p-4 text-sm text-[var(--muted)] dark:bg-slate-900">
-              No deal shares available to list.
+          {!marketplace.address ? (
+            <div>
+              <div className="rounded-md border border-[var(--line)] bg-slate-50 p-4 text-sm dark:bg-slate-900">
+                <p className="font-semibold text-[var(--foreground)]">Wallet required</p>
+                <p className="mt-1 leading-6 text-[var(--muted)]">
+                  Connect Wallet to create a marketplace listing for owned deal shares.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled
+                className="mt-5 w-full cursor-not-allowed rounded-md bg-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+              >
+                Create listing unavailable
+              </button>
+            </div>
+          ) : dealHoldings.length === 0 ? (
+            <div>
+              <div className="rounded-md border border-[var(--line)] bg-slate-50 p-4 text-sm dark:bg-slate-900">
+                <p className="font-semibold text-[var(--foreground)]">No listable deal holdings</p>
+                <p className="mt-1 leading-6 text-[var(--muted)]">
+                  This wallet does not currently hold deal shares. Invest in a deal or receive shares before creating a listing.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled
+                className="mt-5 w-full cursor-not-allowed rounded-md bg-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+              >
+                Create listing unavailable
+              </button>
             </div>
           ) : (
             <>
@@ -294,7 +322,7 @@ export default function MarketplacePage() {
             />
             <div className="mt-4 rounded-md border border-[var(--line)] bg-[var(--background)] p-4 text-sm">
               <PreviewRow label="Total cost" value={formatCurrency(totalCost)} />
-              <PreviewRow label="Settlement" value="USDC for ERC-1155 deal shares" />
+              <PreviewRow label="Settlement" value="USDC for deal shares" />
             </div>
             <div className="mt-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">
               Future revenue distributions follow the shares after settlement.

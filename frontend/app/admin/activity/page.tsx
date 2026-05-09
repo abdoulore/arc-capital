@@ -25,7 +25,7 @@ export default function AdminActivityPage() {
       <AdminHeader title="Audit log" description="Admin actions, treasury movements, configuration changes, and intervention events." />
       <AdminPanel title="Operational activity">
         <div className="divide-y divide-[var(--line)]">
-          {activity.length === 0 ? <p className="text-sm text-[var(--muted)]">No admin activity logged yet.</p> : null}
+          {activity.length === 0 ? <p className="text-sm text-[var(--muted)]">No Activity Yet</p> : null}
           {activity.map((item) => (
             <div key={item.id} className="grid gap-2 py-3 text-sm lg:grid-cols-[180px_160px_1fr_180px]">
               <span>{formatDate(item.timestamp)}</span>

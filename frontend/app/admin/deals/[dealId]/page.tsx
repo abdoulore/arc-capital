@@ -57,8 +57,8 @@ export default function AdminDealDetailPage() {
             <Row label="Status" value={status === "closed" ? "Closed" : "Open"} />
             <Row label="Target raise" value={deal?.targetRaise ? formatCurrency(Number(deal.targetRaise), 0) : "Awaiting Live Data"} />
             <Row label="Raised" value={deal?.totalRaised ? formatCurrency(Number(deal.totalRaised), 0) : "Awaiting Live Data"} />
-            <Row label="Risk" value={deal?.riskLevel ?? "Pending admin input"} />
-            <Row label="Yield model" value={deal?.revenueModel ?? "Pending admin input"} />
+            <Row label="Risk" value={deal?.riskLevel ?? "Pending Integration"} />
+            <Row label="Yield model" value={deal?.revenueModel ?? "Pending Integration"} />
             <Row label="Contract" value={deal?.contractAddress ? formatAddress(deal.contractAddress) : "Contract pending"} />
           </div>
         </AdminPanel>

@@ -87,7 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="hidden rounded-md border border-[var(--line)] px-3 py-2 text-sm lg:block">
               <span className="text-[var(--muted)]">USDC</span>
               <span className="ml-2 font-semibold">
-                {!mounted || !address ? "Connect Wallet" : typeof balance === "bigint" ? formatUSDC(balance, 2) : "Loading"}
+                {!mounted || !address ? "Not connected" : typeof balance === "bigint" ? formatUSDC(balance, 2) : "Loading"}
               </span>
             </div>
             <div

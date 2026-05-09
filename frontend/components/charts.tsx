@@ -21,7 +21,7 @@ export function YieldChart({ totalYield, history = [] }: { totalYield?: bigint; 
       <div className="mb-4">
         <h2 className="font-semibold">Yield trend</h2>
         <p className="text-sm text-[var(--muted)]">
-          {hasLiveYield ? `${formatTokenAmount(totalYield, 6, "USDC", 2)} currently claimable` : "Awaiting wallet connection"}
+          {hasLiveYield ? `${formatTokenAmount(totalYield, 6, "USDC", 2)} currently claimable` : "Connect Wallet"}
         </p>
       </div>
 
@@ -29,7 +29,7 @@ export function YieldChart({ totalYield, history = [] }: { totalYield?: bigint; 
         <div className="rounded-md border border-[var(--line)] bg-[var(--background)] p-4">
           <p className="text-xs uppercase tracking-normal text-[var(--muted)]">Claimable now</p>
           <p className="mt-2 text-2xl font-semibold">
-            {hasLiveYield ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Connect Wallet"}
+            {hasLiveYield ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data"}
           </p>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
             <div
@@ -45,10 +45,10 @@ export function YieldChart({ totalYield, history = [] }: { totalYield?: bigint; 
         <div className="rounded-md border border-[var(--line)] px-4 py-3 text-sm text-[var(--muted)] md:w-64">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="font-medium text-[var(--foreground)]">Yield history</p>
-            <span className="text-xs">{chartPoints.length} points</span>
+            <span className="text-xs">{chartPoints.length < 2 ? "No yield history yet" : `${chartPoints.length} points`}</span>
           </div>
           {chartPoints.length < 2 ? (
-            <p className="text-xs leading-5">Recording started. The trend line appears after the next dashboard snapshot.</p>
+            <p className="text-xs leading-5">No yield history yet.</p>
           ) : (
             <div className="flex h-24 items-end gap-1">
               {chartPoints.map((point) => {

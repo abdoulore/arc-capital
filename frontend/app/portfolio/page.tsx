@@ -37,41 +37,50 @@ export default function PortfolioPage() {
         description="See what is liquid, what is locked, what can be listed, and what has claimable yield."
       />
 
+      {!connected ? (
+        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
+          <p className="font-semibold">Connect Wallet</p>
+          <p className="mt-1 text-blue-800 dark:text-blue-200">
+            Vault balances, deal holdings, claimable yield, and transaction history are wallet-specific.
+          </p>
+        </div>
+      ) : null}
+
       <section className="grid gap-4 md:grid-cols-3">
-        <PortfolioMetric label="Total value" value={connected ? formatTokenAmount(totalValue, 6, "USDC", 2) : "Connect Wallet"} />
-        <PortfolioMetric label="Wallet liquidity" value={connected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Connect Wallet"} />
-        <PortfolioMetric label="Claimable yield" value={connected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Connect Wallet"} />
+        <PortfolioMetric label="Total value" value={connected ? formatTokenAmount(totalValue, 6, "USDC", 2) : "Awaiting Live Data"} />
+        <PortfolioMetric label="Wallet liquidity" value={connected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Awaiting Live Data"} />
+        <PortfolioMetric label="Claimable yield" value={connected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data"} />
       </section>
 
       <section className="mt-6 grid gap-4 lg:grid-cols-3">
         <PositionPanel
           title="Monthly Vault"
           status="Semi-liquid"
-          value={connected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Connect Wallet"}
-          detail="NAV-priced vault shares. Withdrawals settle to wallet and may carry a penalty outside the window."
+          value={connected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Awaiting Live Data"}
+          detail="Monthly liquidity with wallet settlement. NAV-priced vault shares are used for accounting."
           rows={[
             ["Liquidity", "Monthly window"],
-            ["Current value", connected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Connect Wallet"],
+            ["Current value", connected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Awaiting Live Data"],
           ]}
         />
         <PositionPanel
           title="Long-Term Fixed Income"
           status="Locked"
-          value={connected ? formatTokenAmount(fixedPrincipal, 6, "USDC", 2) : "Connect Wallet"}
+          value={connected ? formatTokenAmount(fixedPrincipal, 6, "USDC", 2) : "Awaiting Live Data"}
           detail="Principal locked by maturity bucket. Yield claims are separate from principal redemption."
           rows={[
             ["Active positions", String(fixedRows.length)],
-            ["Claimable yield", connected ? formatTokenAmount(fixedYield, 6, "USDC", 2) : "Connect Wallet"],
+            ["Claimable yield", connected ? formatTokenAmount(fixedYield, 6, "USDC", 2) : "Awaiting Live Data"],
           ]}
         />
         <PositionPanel
           title="Private Deal Holdings"
           status="Tradable"
-          value={connected ? formatTokenAmount(dealValue, 6, "USDC", 2) : "Connect Wallet"}
-          detail="ERC-1155 ownership positions. Yield rights follow ownership through marketplace trades."
+          value={connected ? formatTokenAmount(dealValue, 6, "USDC", 2) : "Awaiting Live Data"}
+          detail="Private deal positions with yield rights that transfer through marketplace trades. ERC-1155 tokens track ownership."
           rows={[
             ["Active holdings", String(dealRows.length)],
-            ["Claimable yield", connected ? formatTokenAmount(dealYield, 6, "USDC", 2) : "Connect Wallet"],
+            ["Claimable yield", connected ? formatTokenAmount(dealYield, 6, "USDC", 2) : "Awaiting Live Data"],
           ]}
         />
       </section>
@@ -97,7 +106,7 @@ export default function PortfolioPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
-              {!connected ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>Connect wallet to view fixed-income positions.</td></tr> : null}
+              {!connected ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>Connect Wallet</td></tr> : null}
               {connected && fixedRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No fixed-income positions.</td></tr> : null}
               {fixedRows.map((position) => <FixedPositionRow key={position.id} position={position} />)}
             </tbody>
@@ -111,7 +120,7 @@ export default function PortfolioPage() {
             <h2 className="font-semibold">Deal positions</h2>
             <p className="text-sm text-[var(--muted)]">Positions available for revenue distributions and secondary listing.</p>
           </div>
-          <StatusBadge label="ERC-1155" />
+          <StatusBadge label="Deal Shares" />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
@@ -126,7 +135,7 @@ export default function PortfolioPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
-              {!connected ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>Connect wallet to view positions.</td></tr> : null}
+              {!connected ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>Connect Wallet</td></tr> : null}
               {connected && dealRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No deal holdings.</td></tr> : null}
               {dealRows.map((holding) => <DealHoldingRow key={holding.contractAddress} holding={holding} />)}
             </tbody>
@@ -137,8 +146,8 @@ export default function PortfolioPage() {
       <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
         <h2 className="font-semibold">Transaction history</h2>
         <div className="mt-3 divide-y divide-[var(--line)]">
-          {!connected ? <p className="py-6 text-sm text-[var(--muted)]">Connect wallet to view transaction history.</p> : null}
-          {connected && portfolio.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No transactions found.</p> : null}
+          {!connected ? <p className="py-6 text-sm text-[var(--muted)]">Connect Wallet</p> : null}
+          {connected && portfolio.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
           {portfolio.activity.map((item) => (
             <div key={item.id} className="flex flex-col gap-1 py-3 text-sm md:flex-row md:items-center md:justify-between">
               <div>
