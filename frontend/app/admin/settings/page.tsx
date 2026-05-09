@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { isAddress } from "viem";
 import { AdminButton, AdminHeader, AdminInput, AdminMetric, AdminPanel } from "@/components/admin/admin-ui";
 import { useTransactionToast } from "@/store/useTransactionToast";
+import { formatAddress, formatPercent } from "@/lib/utils";
 
 type Settings = {
   treasuryWallet: string;
@@ -82,8 +83,8 @@ export default function AdminSettingsPage() {
       <AdminHeader title="Protocol settings" description="Manage backend configuration for treasury, networks, penalties, withdrawal schedule, marketplace fees, and admin wallets." />
 
       <div className="mb-4 grid gap-3 md:grid-cols-3">
-        <AdminMetric label="Treasury wallet" value={shortAddress(settings.treasuryWallet) || "Not set"} detail="Backend configuration" />
-        <AdminMetric label="Default penalty" value={`${settings.defaultPenaltyBps || 0} bps`} detail={`${((settings.defaultPenaltyBps || 0) / 100).toFixed(2)}% outside window`} />
+        <AdminMetric label="Treasury wallet" value={settings.treasuryWallet ? formatAddress(settings.treasuryWallet) : "Not set"} detail="Backend configuration" />
+        <AdminMetric label="Default penalty" value={`${settings.defaultPenaltyBps || 0} bps`} detail={`${formatPercent((settings.defaultPenaltyBps || 0) / 100)} outside window`} />
         <AdminMetric label="Admin wallets" value={String(settings.adminWallets.length)} detail="Operator allowlist entries" />
       </div>
 
@@ -165,10 +166,4 @@ function cleanList(value: string[]) {
 function toNumber(value: string | number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
-}
-
-function shortAddress(value: string) {
-  if (!value) return "";
-  if (value.length <= 16) return value;
-  return `${value.slice(0, 10)}...${value.slice(-6)}`;
 }

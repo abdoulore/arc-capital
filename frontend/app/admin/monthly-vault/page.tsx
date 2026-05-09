@@ -5,6 +5,7 @@ import { formatUnits } from "viem";
 import { AdminButton, AdminHeader, AdminInput, AdminMetric, AdminPanel, formatUsdc } from "@/components/admin/admin-ui";
 import { useAdminContracts } from "@/hooks/useAdminContracts";
 import { VAULT_ADDRESS } from "@/app/constants";
+import { formatDate, formatNumber, formatPercent } from "@/lib/utils";
 
 type TreasurySummary = {
   history: Array<{ destination: string; amount: string; type: string }>;
@@ -37,14 +38,14 @@ export default function AdminMonthlyVaultPage() {
   const estimatedInvestorCapital = monthlyTVL > monthlyRoutedYield ? monthlyTVL - monthlyRoutedYield : BigInt(0);
   const navPerShare =
     typeof admin.metrics.monthlyPricePerShare === "bigint"
-      ? `${Number(formatUnits(admin.metrics.monthlyPricePerShare, 18)).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 6 })} USDC/share`
+      ? `${formatNumber(Number(formatUnits(admin.metrics.monthlyPricePerShare, 18)), 6)} USDC/share`
       : "Awaiting Live Data";
   const windowStart = admin.metrics.windowStart;
   const windowDuration = admin.metrics.windowDuration;
   const windowConfigured = typeof windowStart === "bigint" && windowStart > BigInt(0) && typeof windowDuration === "bigint" && windowDuration > BigInt(0);
   const windowStatus = windowConfigured ? getWindowStatus(windowStart, windowDuration) : "Not configured";
   const windowDetail = windowConfigured
-    ? `Starts ${new Date(Number(windowStart) * 1000).toLocaleString()} and repeats monthly`
+    ? `Starts ${formatDate(windowStart)} and repeats monthly`
     : "Set a first start date to activate free monthly withdrawals";
 
   return (
@@ -57,8 +58,8 @@ export default function AdminMonthlyVaultPage() {
         <AdminMetric label="Investor capital estimate" value={formatUsdc(estimatedInvestorCapital)} detail="TVL less routed yield" />
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-4">
-        <AdminMetric label="Liquidity buffer" value={typeof admin.metrics.liquidityBuffer === "bigint" ? `${Number(admin.metrics.liquidityBuffer) / 100}%` : "Awaiting Live Data"} />
-        <AdminMetric label="Penalty" value={typeof admin.metrics.penaltyBps === "bigint" ? `${Number(admin.metrics.penaltyBps) / 100}%` : "Awaiting Live Data"} />
+        <AdminMetric label="Liquidity buffer" value={typeof admin.metrics.liquidityBuffer === "bigint" ? formatPercent(Number(admin.metrics.liquidityBuffer) / 100) : "Awaiting Live Data"} />
+        <AdminMetric label="Penalty" value={typeof admin.metrics.penaltyBps === "bigint" ? formatPercent(Number(admin.metrics.penaltyBps) / 100) : "Awaiting Live Data"} />
         <AdminMetric label="Withdrawal window" value={windowStatus} detail={windowDetail} />
         <AdminMetric label="Shareholder effect" value="NAV uplift" detail="Injected yield increases share price, not share count" />
       </div>

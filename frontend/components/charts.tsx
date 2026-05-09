@@ -1,4 +1,4 @@
-import { formatTokenAmount } from "@/lib/utils";
+import { formatDate, formatPercent, formatTokenAmount } from "@/lib/utils";
 import type { DashboardAllocation } from "@/hooks/useDashboardData";
 
 type YieldHistoryPoint = {
@@ -60,7 +60,7 @@ export function YieldChart({ totalYield, history = [] }: { totalYield?: bigint; 
                     key={point.id}
                     className="min-w-0 flex-1 rounded-t bg-blue-600"
                     style={{ height: `${height}%` }}
-                    title={`${new Date(point.timestamp).toLocaleString()} - ${formatTokenAmount(point.totalYield, 6, "USDC", 2)}`}
+                    title={`${formatDate(point.timestamp)} - ${formatTokenAmount(point.totalYield, 6, "USDC", 2)}`}
                   />
                 );
               })}
@@ -90,7 +90,7 @@ export function AllocationPieChart({ allocations = [] }: { allocations?: Dashboa
               <div key={item.label}>
                 <div className="mb-1 flex items-center justify-between gap-3 text-sm">
                   <span className="font-medium">{item.label}</span>
-                  <span className="text-[var(--muted)]">{percent.toFixed(2)}%</span>
+                  <span className="text-[var(--muted)]">{formatPercent(percent)}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                   <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.max(1, percent)}%` }} />

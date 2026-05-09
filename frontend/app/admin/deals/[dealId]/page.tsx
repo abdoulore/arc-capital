@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { type Address } from "viem";
 import { AdminButton, AdminHeader, AdminPanel } from "@/components/admin/admin-ui";
 import { useAdminContracts } from "@/hooks/useAdminContracts";
-import { formatCurrency } from "@/lib/utils";
+import { formatAddress, formatCurrency, formatDate } from "@/lib/utils";
 
 type AdminDealMetadata = {
   id: string;
@@ -57,9 +57,9 @@ export default function AdminDealDetailPage() {
             <Row label="Status" value={status === "closed" ? "Closed" : "Open"} />
             <Row label="Target raise" value={deal?.targetRaise ? formatCurrency(Number(deal.targetRaise), 0) : "Awaiting Live Data"} />
             <Row label="Raised" value={deal?.totalRaised ? formatCurrency(Number(deal.totalRaised), 0) : "Awaiting Live Data"} />
-            <Row label="Risk" value={deal?.riskLevel ?? "Moderate"} />
-            <Row label="Yield model" value={deal?.revenueModel ?? "Revenue share"} />
-            <Row label="Contract" value={deal?.contractAddress ?? "Seed deal"} />
+            <Row label="Risk" value={deal?.riskLevel ?? "Pending admin input"} />
+            <Row label="Yield model" value={deal?.revenueModel ?? "Pending admin input"} />
+            <Row label="Contract" value={deal?.contractAddress ? formatAddress(deal.contractAddress) : "Contract pending"} />
           </div>
         </AdminPanel>
         <AdminPanel title="Admin actions">
@@ -80,7 +80,7 @@ export default function AdminDealDetailPage() {
           <Row label="Investors" value={String(deal?.investorCount ?? 0)} />
           <Row label="Ownership issued" value={deal?.ownershipIssued ?? "0 shares"} />
           <Row label="Distributions" value={deal?.distributions ? formatCurrency(Number(deal.distributions), 2) : "Awaiting Live Data"} />
-          <Row label="Close date" value={deal?.closeDate ? new Date(deal.closeDate).toLocaleString("en-US") : "Open"} />
+          <Row label="Close date" value={deal?.closeDate ? formatDate(deal.closeDate) : "Open"} />
         </div>
       </AdminPanel>
     </div>

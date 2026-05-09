@@ -5,11 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useReadContract } from "wagmi";
-import { formatUnits } from "viem";
 import { ReactNode, useEffect, useState } from "react";
 import { USDC_ABI, USDC_ADDRESS } from "@/app/constants";
 import { useAppStore } from "@/store/useAppStore";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatUSDC } from "@/lib/utils";
 import { TransactionToastHost } from "@/components/transaction-toast";
 import { useIsAdmin } from "@/hooks/useAdmin";
 import { ARC_TESTNET_CHAIN_ID } from "@/lib/network";
@@ -35,7 +34,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     args: address ? [address] : undefined,
     query: { refetchInterval: 8000 },
   });
-  const balanceValue = typeof balance === "bigint" ? Number(formatUnits(balance, 6)) : 0;
   const expectedChainId = ARC_TESTNET_CHAIN_ID;
   const networkLabel = !mounted || !address
     ? "Wallet disconnected"
@@ -88,7 +86,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <div className="hidden rounded-md border border-[var(--line)] px-3 py-2 text-sm lg:block">
               <span className="text-[var(--muted)]">USDC</span>
-              <span className="ml-2 font-semibold">{mounted && typeof balance === "bigint" ? formatCurrency(balanceValue) : "Awaiting Live Data"}</span>
+              <span className="ml-2 font-semibold">
+                {!mounted || !address ? "Connect Wallet" : typeof balance === "bigint" ? formatUSDC(balance, 2) : "Loading"}
+              </span>
             </div>
             <div
               className={cn(

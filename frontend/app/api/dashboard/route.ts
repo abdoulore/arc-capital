@@ -17,6 +17,7 @@ import {
 import { addDashboardSnapshot, getDashboardSnapshots, getDeals, type DealMetadata } from "@/lib/admin-store";
 import { getLogsInChunks } from "@/lib/chain-logs";
 import { ARC_TESTNET_RPC_URL, arcTestnet } from "@/lib/network";
+import { formatTokenAmount } from "@/lib/utils";
 
 const client = createPublicClient({
   chain: arcTestnet,
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
 
     const allocations = [
       { label: "Wallet USDC", value: walletLiquidity, detail: "Available balance" },
-      { label: "Monthly Vault", value: monthlyValue, detail: `${monthlyShares.toString()} shares` },
+      { label: "Monthly Vault", value: monthlyValue, detail: formatTokenAmount(monthlyShares, 6, "shares", 4) },
       { label: "Fixed Income", value: fixed.principal + fixed.yield, detail: `${fixed.activePositions} active positions` },
       { label: "Deal Holdings", value: deal.value + deal.yield, detail: `${deal.activeHoldings} active holdings` },
     ].filter((item) => item.value > BigInt(0));

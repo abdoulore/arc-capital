@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { formatCurrency } from "@/lib/utils";
+import { formatUSDC } from "@/lib/utils";
 
 export function AdminHeader({ title, description }: { title: string; description: string }) {
   return (
@@ -60,5 +60,5 @@ export function AdminInput({ value, onChange, placeholder, type = "text" }: { va
 
 export function formatUsdc(value?: bigint) {
   if (typeof value !== "bigint") return "Awaiting Live Data";
-  return formatCurrency(Number(value) / 1_000_000);
+  return formatUSDC(value);
 }

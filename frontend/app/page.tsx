@@ -122,7 +122,7 @@ export default function DashboardPage() {
         <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
           <p className="font-semibold">No Arc portfolio activity yet</p>
           <p className="mt-1 text-blue-800 dark:text-blue-200">
-            Fund this wallet with Arc Testnet USDC, confirm the deployed contract addresses are in <span className="font-mono">frontend/.env.local</span>, then make a deposit or deal investment.
+            Fund this wallet with Arc Testnet USDC, confirm the deployed contract addresses are configured, then make a deposit or deal investment.
           </p>
         </div>
       ) : null}

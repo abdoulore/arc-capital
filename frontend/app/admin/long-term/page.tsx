@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { isAddress, type Address } from "viem";
 import { AdminButton, AdminHeader, AdminInput, AdminMetric, AdminPanel, formatUsdc } from "@/components/admin/admin-ui";
 import { useAdminContracts } from "@/hooks/useAdminContracts";
-import { formatTokenAmount } from "@/lib/utils";
+import { formatAddress, formatDate, formatPercent, formatTokenAmount } from "@/lib/utils";
 
 type LongTermAnalytics = {
   activePositions: number;
@@ -111,11 +111,11 @@ export default function AdminLongTermPage() {
             <div key={unlock.id} className="flex flex-col gap-1 py-3 text-sm md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="font-medium">Position #{unlock.id}</p>
-                <p className="text-[var(--muted)]">{unlock.owner.slice(0, 8)}...{unlock.owner.slice(-6)}</p>
+                <p className="text-[var(--muted)]">{formatAddress(unlock.owner)}</p>
               </div>
               <div className="text-[var(--muted)] md:text-right">
                 <p>{formatTokenAmount(toBigInt(unlock.principal), 6, "USDC", 2)} principal</p>
-                <p>{new Date(Number(unlock.maturity) * 1000).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })} at {(Number(unlock.apyBps) / 100).toFixed(2)}%</p>
+                <p>{formatDate(BigInt(unlock.maturity))} at {formatPercent(Number(unlock.apyBps) / 100)}</p>
               </div>
             </div>
           ))}

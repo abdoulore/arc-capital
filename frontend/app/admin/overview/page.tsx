@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminHeader, AdminMetric, AdminPanel, formatUsdc } from "@/components/admin/admin-ui";
 import { useAdminContracts } from "@/hooks/useAdminContracts";
-import { formatNumber, formatTokenAmount } from "@/lib/utils";
+import { formatDate, formatNumber, formatTokenAmount } from "@/lib/utils";
 
 type AdminActivity = {
   id: string;
@@ -87,7 +87,7 @@ export default function AdminOverviewPage() {
         <AdminMetric label="Total TVL" value={formatUsdc(metrics.monthlyTVL)} detail="Monthly Vault live onchain value" />
         <AdminMetric label="Indexed deposits" value={formatTokenAmount(overview.totalDeposits, 6, "USDC", 2)} detail="Event indexer total" />
         <AdminMetric label="Active listing volume" value={formatTokenAmount(overview.listingVolume, 6, "USDC", 2)} detail="Open orderbook liquidity" />
-        <AdminMetric label="Active deals" value={(metrics.dealCount ?? BigInt(0)).toString()} detail="DealVaultFactory count" />
+        <AdminMetric label="Active deals" value={formatNumber(Number(metrics.dealCount ?? BigInt(0)), 0)} detail="DealVaultFactory count" />
       </div>
 
       <div className="mt-6 grid gap-4 xl:grid-cols-[1fr_1fr]">
@@ -122,7 +122,7 @@ export default function AdminOverviewPage() {
                 <p className="text-[var(--muted)]">{item.summary || "No summary provided."}</p>
               </div>
               <div className="text-left text-xs text-[var(--muted)] md:text-right">
-                <p>{new Date(item.timestamp).toLocaleString()}</p>
+                <p>{formatDate(item.timestamp)}</p>
                 {item.hash ? <p className="font-mono">{item.hash.slice(0, 10)}...{item.hash.slice(-6)}</p> : null}
               </div>
             </div>
@@ -152,7 +152,7 @@ function readRecentLocalActivity() {
           id: item.id,
           timestamp: item.timestamp,
           action: item.action,
-          summary: item.detail ?? "Wallet-confirmed transaction.",
+          summary: item.detail ?? "Transaction confirmed.",
           hash: item.hash,
         })),
       );

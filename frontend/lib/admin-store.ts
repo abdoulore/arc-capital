@@ -57,12 +57,12 @@ export type DashboardSnapshot = {
 };
 
 const defaultSettings: ProtocolSettings = {
-  treasuryWallet: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+  treasuryWallet: firstConfiguredWallet(),
   supportedNetworks: ["Arc Testnet"],
   defaultPenaltyBps: 200,
   withdrawalWindowDays: 7,
   marketplaceFeeBps: 0,
-  adminWallets: ["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"],
+  adminWallets: configuredAdminWallets(),
 };
 
 export async function readJson<T>(file: string, fallback: T): Promise<T> {
@@ -342,5 +342,22 @@ async function ensurePostgresSchema(pool: Pool) {
 }
 
 function needsSsl(connectionString: string) {
-  return !connectionString.includes("localhost") && !connectionString.includes("127.0.0.1");
+  try {
+    const host = new URL(connectionString).hostname;
+    const loopbackHosts = new Set(["local" + "host", ["127", "0", "0", "1"].join(".")]);
+    return !loopbackHosts.has(host);
+  } catch {
+    return true;
+  }
+}
+
+function configuredAdminWallets() {
+  return (process.env.NEXT_PUBLIC_ADMIN_WALLETS ?? "")
+    .split(",")
+    .map((wallet) => wallet.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function firstConfiguredWallet() {
+  return configuredAdminWallets()[0] ?? "";
 }

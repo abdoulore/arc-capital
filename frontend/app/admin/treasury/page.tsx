@@ -7,7 +7,7 @@ import { LONG_TERM_VAULT_ADDRESS, USDC_ABI, USDC_ADDRESS } from "@/app/constants
 import { AdminButton, AdminHeader, AdminInput, AdminMetric, AdminPanel, formatUsdc } from "@/components/admin/admin-ui";
 import { useAdminContracts } from "@/hooks/useAdminContracts";
 import type { DealMetadata } from "@/lib/admin-store";
-import { formatTokenAmount } from "@/lib/utils";
+import { formatAddress, formatDate, formatTokenAmount } from "@/lib/utils";
 
 type TreasurySummary = {
   treasury?: string;
@@ -78,7 +78,7 @@ export default function AdminTreasuryPage() {
     <div>
       <AdminHeader title="Treasury and distributions" description="Route real wallet-funded yield into vaults and deal contracts. No synthetic yield is created here." />
       <div className="grid gap-4 md:grid-cols-4">
-        <AdminMetric label="Treasury wallet" value={treasuryAddress ? shortAddress(treasuryAddress) : "Awaiting Treasury Connection"} detail="Settlement source" />
+        <AdminMetric label="Treasury wallet" value={treasuryAddress ? formatAddress(treasuryAddress) : "Awaiting Treasury Connection"} detail="Settlement source" />
         <AdminMetric label="Treasury USDC" value={treasuryUsdc !== undefined ? formatTokenAmount(treasuryUsdc, 6, "", 2).trim() : "Loading"} detail="USDC" />
         <AdminMetric label="Monthly vault cash" value={summary ? formatTokenAmount(toBigInt(summary.monthlyVaultBalance), 6, "", 2).trim() : formatUsdc(admin.metrics.monthlyTVL)} detail="USDC" />
         <AdminMetric label="Long-term reserves" value={fixedReserves !== undefined ? formatTokenAmount(fixedReserves, 6, "", 2).trim() : "Loading"} detail="USDC" />
@@ -142,11 +142,11 @@ export default function AdminTreasuryPage() {
             <div key={item.id} className="flex flex-col gap-1 py-3 text-sm md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="font-medium">{humanizeType(item.type)}</p>
-                <p className="text-[var(--muted)]">{formatTokenAmount(toBigInt(item.amount), 6, "USDC", 2)} routed to {item.destination ? shortAddress(item.destination) : "destination"}</p>
+                <p className="text-[var(--muted)]">{formatTokenAmount(toBigInt(item.amount), 6, "USDC", 2)} routed to {item.destination ? formatAddress(item.destination) : "destination"}</p>
               </div>
               <div className="text-[var(--muted)] md:text-right">
-                <p>{new Date(item.timestamp).toLocaleString("en-US")}</p>
-                <p className="font-mono text-xs">{item.hash.slice(0, 10)}...{item.hash.slice(-6)}</p>
+                <p>{formatDate(item.timestamp)}</p>
+                <p className="font-mono text-xs">{formatAddress(item.hash, 10, 6)}</p>
               </div>
             </div>
           ))}
@@ -162,10 +162,6 @@ function toBigInt(value?: string) {
   } catch {
     return BigInt(0);
   }
-}
-
-function shortAddress(address: string) {
-  return `${address.slice(0, 10)}...${address.slice(-6)}`;
 }
 
 function humanizeType(type: string) {

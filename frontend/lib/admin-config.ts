@@ -1,6 +1,4 @@
-export const DEFAULT_ADMIN_WALLETS = [
-  "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
-];
+export const DEFAULT_ADMIN_WALLETS: string[] = [];
 
 export function getAdminWallets() {
   const configured = process.env.NEXT_PUBLIC_ADMIN_WALLETS;

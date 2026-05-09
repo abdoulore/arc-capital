@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminHeader, AdminMetric, AdminPanel } from "@/components/admin/admin-ui";
-import { formatNumber, formatTokenAmount } from "@/lib/utils";
+import { formatAddress, formatDate, formatNumber, formatTokenAmount } from "@/lib/utils";
 
 type UsersSummary = {
   activeInvestors: number;
@@ -65,7 +65,7 @@ export default function AdminUsersPage() {
               {!loadError && (!summary || summary.wallets.length === 0) ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>{loading ? "Loading investor wallets." : "No investor wallets found."}</td></tr> : null}
               {summary?.wallets.map((wallet) => (
                 <tr key={wallet.wallet}>
-                  <td className="py-3 font-mono text-xs">{shortAddress(wallet.wallet)}</td>
+                  <td className="py-3 font-mono text-xs">{formatAddress(wallet.wallet)}</td>
                   <td>{formatTokenAmount(toBigInt(wallet.totalDeposits), 6, "USDC", 2)}</td>
                   <td>{formatNumber(wallet.activeInvestments, 0)}</td>
                   <td>{formatTokenAmount(toBigInt(wallet.yieldClaimed), 6, "USDC", 2)}</td>
@@ -88,8 +88,8 @@ export default function AdminUsersPage() {
                 <p className="text-[var(--muted)]">{formatNumber(Number(item.amount), 0)} shares for {formatTokenAmount(toBigInt(item.totalPrice), 6, "USDC", 2)}</p>
               </div>
               <div className="text-[var(--muted)] md:text-right">
-                <p>{shortAddress(item.buyer)}</p>
-                <p>{new Date(item.timestamp).toLocaleString("en-US")}</p>
+                <p>{formatAddress(item.buyer)}</p>
+                <p>{formatDate(item.timestamp)}</p>
               </div>
             </div>
           ))}
@@ -105,10 +105,6 @@ function toBigInt(value?: string) {
   } catch {
     return BigInt(0);
   }
-}
-
-function shortAddress(address: string) {
-  return `${address.slice(0, 8)}...${address.slice(-6)}`;
 }
 
 function metricValue(value: string | undefined, loading: boolean, error: boolean) {

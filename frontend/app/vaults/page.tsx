@@ -65,7 +65,7 @@ export default function VaultsPage() {
   const pendingWithdrawRaw = (pendingWithdrawShares * pps) / parseUnits("1", WAD_DECIMALS);
   const pendingWithdrawDate =
     pendingWithdrawTime > BigInt(0)
-      ? new Date(Number(pendingWithdrawTime) * 1000).toLocaleString("en-US")
+      ? formatDate(pendingWithdrawTime)
       : "Awaiting Live Data";
   const expectedShares = pps > BigInt(0) ? (depositAmount * parseUnits("1", WAD_DECIMALS)) / pps : BigInt(0);
   const shareValueRaw = (shares * pps) / parseUnits("1", WAD_DECIMALS);
@@ -153,7 +153,7 @@ export default function VaultsPage() {
         <div className="mt-6 grid gap-4 md:grid-cols-4">
           <MetricCard label="Yearly APY" value={monthlyApy.value} detail={monthlyApy.detail} />
           <MetricCard label="Total value locked" value={hasTotalAssets ? formatTokenAmount(totalAssets, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data"} detail="Live onchain vault assets" />
-          <MetricCard label="Your claimable value" value={hasShares ? formatCurrency(shareValue) : "Awaiting Live Data"} detail={hasShares ? `${formatUnits(shares, 18)} shares` : "Wallet position pending"} />
+          <MetricCard label="Your claimable value" value={hasShares ? formatCurrency(shareValue) : "Awaiting Live Data"} detail={hasShares ? formatTokenAmount(shares, SHARE_DECIMALS, "shares", 4) : "Wallet position pending"} />
           <MetricCard label="Withdrawal window" value={withdrawalWindow.label} detail={withdrawalWindow.detail} />
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
@@ -274,7 +274,7 @@ export default function VaultsPage() {
                     <tr key={position.id.toString()}>
                       <td className="py-4 font-medium">#{position.id.toString()}</td>
                       <td className="py-4">{position.ready ? formatTokenAmount(position.principal, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data"}</td>
-                      <td className="py-4">{position.ready ? `${(Number(position.apyBps) / 100).toFixed(2)}%` : "Awaiting Live Data"}</td>
+                      <td className="py-4">{position.ready ? formatPercent(Number(position.apyBps) / 100) : "Awaiting Live Data"}</td>
                       <td className="py-4">{position.ready ? formatDate(position.maturity) : "Awaiting Live Data"}</td>
                       <td className="py-4">{position.ready ? formatTokenAmount(position.claimableYield, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data"}</td>
                       <td className="py-4">
@@ -341,7 +341,7 @@ export default function VaultsPage() {
           inputDisabled={hasPendingWithdraw}
           preview={[
             ["Shares burned", hasPendingWithdraw ? formatTokenAmount(pendingWithdrawShares, SHARE_DECIMALS, "shares", 4) : formatTokenAmount(requestedShares, SHARE_DECIMALS, "shares", 4), "Shares removed from your vault position."],
-            ["Estimated net received", hasPendingWithdraw ? formatTokenAmount(pendingWithdrawRaw, USDC_DECIMALS, "USDC", 2) : `${formatCurrency(netWithdraw)} / ${netWithdraw.toLocaleString("en-US", { maximumFractionDigits: 2 })} USDC`],
+            ["Estimated net received", hasPendingWithdraw ? formatTokenAmount(pendingWithdrawRaw, USDC_DECIMALS, "USDC", 2) : formatCurrency(netWithdraw)],
             ["Penalty amount", hasPendingWithdraw ? "Calculated on execution" : formatCurrency(previewPenalty), withdrawalWindow.isOpen ? "No penalty while the withdrawal window is open." : "Fee applied outside the free withdrawal window."],
             ["Withdrawal window", withdrawalWindow.label, withdrawalWindow.isOpen ? "Free withdrawals are available now." : "Free withdrawals are only available during the monthly window."],
             ["Estimated gas", "Awaiting Wallet Estimate", "Estimated network fee."],

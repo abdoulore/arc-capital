@@ -153,12 +153,6 @@ export function useMonthlyVault() {
             abi: USDC_ABI,
             functionName: "approve",
             args: [VAULT_ADDRESS, parsed],
-            gas: await estimateGas(publicClient, address, {
-              address: USDC_ADDRESS,
-              abi: USDC_ABI,
-              functionName: "approve",
-              args: [VAULT_ADDRESS, parsed],
-            }),
           }),
         async () =>
           writeContractAsync({
@@ -166,12 +160,6 @@ export function useMonthlyVault() {
             abi: VAULT_ABI,
             functionName: "deposit",
             args: [parsed],
-            gas: await estimateGas(publicClient, address, {
-              address: VAULT_ADDRESS,
-              abi: VAULT_ABI,
-              functionName: "deposit",
-              args: [parsed],
-            }),
           }),
       ],
       afterSuccess: refreshMonthlyVault,
@@ -203,12 +191,6 @@ export function useMonthlyVault() {
             abi: VAULT_ABI,
             functionName: "withdraw",
             args: [shareAmount],
-            gas: await estimateGas(publicClient, address, {
-              address: VAULT_ADDRESS,
-              abi: VAULT_ABI,
-              functionName: "withdraw",
-              args: [shareAmount],
-            }),
           }),
       ],
       afterSuccess: refreshMonthlyVault,
@@ -216,7 +198,7 @@ export function useMonthlyVault() {
         amount: shareAmount.toString(),
         amountUnit: "shares",
         verb: "withdrawn",
-        detail: "Wallet-confirmed direct withdrawal.",
+        detail: "Direct withdrawal sent to wallet.",
       },
     });
   }
@@ -240,11 +222,6 @@ export function useMonthlyVault() {
             address: VAULT_ADDRESS,
             abi: VAULT_ABI,
             functionName: "executeWithdraw",
-            gas: await estimateGas(publicClient, address, {
-              address: VAULT_ADDRESS,
-              abi: VAULT_ABI,
-              functionName: "executeWithdraw",
-            }),
           }),
       ],
       afterSuccess: refreshMonthlyVault,
@@ -822,7 +799,7 @@ async function runTransaction({
         timestamp: new Date().toISOString(),
         action: label,
         verb: activity?.verb ?? "confirmed",
-        detail: activity?.detail ?? "Wallet-confirmed transaction. Onchain event indexing may appear shortly.",
+        detail: activity?.detail ?? "Transaction confirmed.",
         hash: lastHash,
         amount: activity?.amount,
         amountLabel: activity?.amountLabel,
@@ -866,15 +843,6 @@ async function waitForNonceAbove(
     if (nonce > previousNonce) return;
     await new Promise((resolve) => window.setTimeout(resolve, 150));
   }
-}
-
-async function estimateGas(
-  publicClient: ReturnType<typeof usePublicClient>,
-  account: `0x${string}` | undefined,
-  request: Parameters<NonNullable<ReturnType<typeof usePublicClient>>["estimateContractGas"]>[0]
-) {
-  if (!publicClient || !account) return undefined;
-  return publicClient.estimateContractGas({ ...request, account });
 }
 
 function getErrorMessage(error: unknown) {

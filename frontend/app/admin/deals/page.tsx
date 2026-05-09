@@ -6,7 +6,7 @@ import { type Address } from "viem";
 import { AdminButton, AdminHeader, AdminInput, AdminMetric, AdminPanel } from "@/components/admin/admin-ui";
 import { useAdminContracts } from "@/hooks/useAdminContracts";
 import { getDealSummary, getVisibleDeals, validateDealForm, type DealMetadata } from "@/lib/deal-ui";
-import { formatCurrency } from "@/lib/utils";
+import { formatAddress, formatCurrency, formatDate } from "@/lib/utils";
 
 export default function AdminDealsPage() {
   const admin = useAdminContracts();
@@ -150,11 +150,11 @@ export default function AdminDealsPage() {
               <Link href={`/admin/deals/${deal.id}`} className="min-w-0">
                 <span className="font-medium">{deal.title}</span>
                 <span className="ml-2 rounded-full bg-slate-100 px-2 py-1 text-xs text-[var(--muted)] dark:bg-slate-900">{deal.status === "closed" ? "Closed" : "Open"}</span>
-                <p className="mt-1 truncate text-xs text-[var(--muted)]">{deal.contractAddress ?? "Seed deal"}</p>
+                <p className="mt-1 truncate text-xs text-[var(--muted)]">{deal.contractAddress ? formatAddress(deal.contractAddress) : "Contract pending"}</p>
               </Link>
               <span className="text-[var(--muted)]">{formatCurrency(Number(deal.totalRaised ?? 0), 0)} raised</span>
               {deal.status === "closed" ? (
-                <span className="text-[var(--muted)]">{deal.closeDate ? new Date(deal.closeDate).toLocaleDateString("en-US") : "Closed"}</span>
+                <span className="text-[var(--muted)]">{deal.closeDate ? formatDate(deal.closeDate) : "Closed"}</span>
               ) : (
                 <AdminButton disabled={!deal.contractAddress} onClick={() => setCloseCandidate(deal)}>Close deal</AdminButton>
               )}

@@ -5,7 +5,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { DEAL_VAULT_ABI, LONG_TERM_VAULT_ABI, LONG_TERM_VAULT_ADDRESS, USDC_ABI, USDC_ADDRESS, VAULT_ABI, VAULT_ADDRESS } from "@/app/constants";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDealVault, useLongTermVault } from "@/hooks/useInvestmentContracts";
-import { formatNumber, formatTokenAmount } from "@/lib/utils";
+import { ARC_TESTNET_EXPLORER_URL } from "@/lib/network";
+import { formatDate, formatNumber, formatPercent, formatTokenAmount } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
 
@@ -143,11 +144,20 @@ export default function PortfolioPage() {
               <div>
                 <p className="font-medium">{item.action}</p>
                 <p className="text-[var(--muted)]">{formatActivitySummary(item)}</p>
-                {item.detail ? <p className="mt-1 font-mono text-xs text-[var(--muted)]">{item.detail}</p> : null}
+                {item.detail && !item.detail.toLowerCase().includes("wallet-confirmed transaction") ? <p className="mt-1 text-xs text-[var(--muted)]">{item.detail}</p> : null}
               </div>
               <div className="text-[var(--muted)] md:text-right">
-                <p>{item.timestamp}</p>
-                {item.hash ? <p className="font-mono text-xs">{item.hash.slice(0, 10)}...{item.hash.slice(-6)}</p> : null}
+                <p>{formatDate(item.timestamp)}</p>
+                {item.hash ? (
+                  <a
+                    href={`${ARC_TESTNET_EXPLORER_URL}/tx/${item.hash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 block font-mono text-xs text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    View transaction
+                  </a>
+                ) : null}
               </div>
             </div>
           ))}
@@ -164,13 +174,13 @@ function FixedPositionRow({
 }) {
   const longTerm = useLongTermVault();
   const claimableYield = toBigInt(position.claimableYield);
-  const maturity = new Date(Number(position.maturity) * 1000).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  const maturity = formatDate(BigInt(position.maturity));
 
   return (
     <tr>
       <td className="py-4 font-medium">#{position.id}</td>
       <td className="py-4">{formatTokenAmount(toBigInt(position.principal), 6, "USDC", 2)}</td>
-      <td className="py-4">{(Number(position.apyBps) / 100).toFixed(2)}%</td>
+      <td className="py-4">{formatPercent(Number(position.apyBps) / 100)}</td>
       <td className="py-4">{maturity}</td>
       <td className="py-4">{formatTokenAmount(claimableYield, 6, "USDC", 2)}</td>
       <td className="py-4">

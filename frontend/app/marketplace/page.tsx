@@ -125,7 +125,7 @@ export default function MarketplacePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
-              {liveRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>Awaiting Live Data</td></tr> : null}
+              {liveRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No active listings.</td></tr> : null}
               {liveRows.map((row) => (
                 <tr key={row.id}>
                   <td className="py-4 font-medium">{row.deal}</td>
