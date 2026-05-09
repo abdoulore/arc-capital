@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/modal";
 import { SectionHeader } from "@/components/section-header";
 import { StatusBadge } from "@/components/status-badge";
+import { WalletGatedButton } from "@/components/wallet-gated-button";
 import { DEAL_VAULT_ABI } from "@/app/constants";
 import { formatCurrency, formatNumber, formatTokenAmount } from "@/lib/utils";
 import { useMarketplace } from "@/hooks/useInvestmentContracts";
@@ -108,9 +109,9 @@ export default function MarketplacePage() {
             <h2 className="font-semibold">Live orderbook</h2>
             <p className="text-sm text-[var(--muted)]">Yield rights transfer with ownership.</p>
           </div>
-          <button onClick={() => setListingOpen(true)} className="rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+          <WalletGatedButton onClick={() => setListingOpen(true)} className="rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
             Create listing
-          </button>
+          </WalletGatedButton>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
@@ -134,9 +135,9 @@ export default function MarketplacePage() {
                   <td className="py-4">{formatTokenAmount(row.priceRaw, 6, "USDC", 2)}</td>
                   <td className="py-4">{formatTokenAmount(row.volumeRaw, 6, "USDC", 2)}</td>
                   <td className="py-4">
-                    <button onClick={() => setSelectedListing(row)} className="rounded-md border border-[var(--line)] px-3 py-2 font-medium hover:bg-slate-50 dark:hover:bg-slate-900">
+                    <WalletGatedButton onClick={() => setSelectedListing(row)} className="rounded-md border border-[var(--line)] px-3 py-2 font-medium hover:bg-slate-50 dark:hover:bg-slate-900">
                       Trade
-                    </button>
+                    </WalletGatedButton>
                   </td>
                 </tr>
               ))}
@@ -201,13 +202,11 @@ export default function MarketplacePage() {
                   Connect Wallet to create a marketplace listing for owned deal shares.
                 </p>
               </div>
-              <button
-                type="button"
-                disabled
-                className="mt-5 w-full cursor-not-allowed rounded-md bg-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+              <WalletGatedButton
+                className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
               >
-                Create listing unavailable
-              </button>
+                Create listing
+              </WalletGatedButton>
             </div>
           ) : dealHoldings.length === 0 ? (
             <div>
@@ -266,7 +265,7 @@ export default function MarketplacePage() {
                 <PreviewRow label="Estimated value" value={formatCurrency(Number(listingAmount || 0) * Number(listingPrice || 0))} />
               </div>
               {formError ? <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">{formError}</p> : null}
-              <button
+              <WalletGatedButton
                 onClick={async () => {
                   const holding = dealHoldings.find((item) => item.contractAddress === selectedDealAddress);
                   if (!holding) {
@@ -300,7 +299,7 @@ export default function MarketplacePage() {
                 className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
               >
                 {marketplace.transaction.status === "pending" ? "Confirming..." : marketplace.transaction.status === "confirmed" ? "Confirmed" : "Create listing"}
-              </button>
+              </WalletGatedButton>
             </>
           )}
         </div>
@@ -327,7 +326,7 @@ export default function MarketplacePage() {
             <div className="mt-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">
               Future revenue distributions follow the shares after settlement.
             </div>
-            <button
+            <WalletGatedButton
               onClick={async () => {
                 const ok = await marketplace.fillListing(amount, BigInt(selectedListing.id), [
                   "0x0000000000000000000000000000000000000000",
@@ -347,7 +346,7 @@ export default function MarketplacePage() {
               className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
             >
               {marketplace.transaction.status === "pending" ? "Confirming..." : marketplace.transaction.status === "confirmed" ? "Confirmed" : "Confirm trade"}
-            </button>
+            </WalletGatedButton>
           </div>
         ) : null}
       </Modal>

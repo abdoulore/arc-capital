@@ -7,6 +7,7 @@ import { MetricCard } from "@/components/metric-card";
 import { Modal } from "@/components/modal";
 import { SectionHeader } from "@/components/section-header";
 import { StatusBadge } from "@/components/status-badge";
+import { WalletGatedButton } from "@/components/wallet-gated-button";
 import { bigintToNumber, formatCurrency, formatNumber, formatPercent, formatTokenAmount } from "@/lib/utils";
 import { useLongTermVault, useMonthlyVault } from "@/hooks/useInvestmentContracts";
 
@@ -157,12 +158,12 @@ export default function VaultsPage() {
           <MetricCard label="Withdrawal window" value={withdrawalWindow.label} detail={withdrawalWindow.detail} />
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
-          <button onClick={() => setDepositOpen(true)} className="rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+          <WalletGatedButton onClick={() => setDepositOpen(true)} className="rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
             Deposit
-          </button>
-          <button onClick={() => setWithdrawOpen(true)} className="rounded-md border border-[var(--line)] px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-900">
+          </WalletGatedButton>
+          <WalletGatedButton onClick={() => setWithdrawOpen(true)} className="rounded-md border border-[var(--line)] px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-900">
             Withdraw
-          </button>
+          </WalletGatedButton>
           <button onClick={vault.fundWallet} className="rounded-md border border-[var(--line)] px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-900">
             Get test USDC
           </button>
@@ -181,8 +182,9 @@ export default function VaultsPage() {
                 id="fixed-income-amount"
                 value={fixedAmount}
                 onChange={(event) => setFixedAmount(event.target.value)}
-                className="mt-2 w-full rounded-md border border-[var(--line)] bg-transparent px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="USDC amount"
+                disabled={!vault.address}
+                className="mt-2 w-full rounded-md border border-[var(--line)] bg-transparent px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[var(--muted)] dark:disabled:bg-slate-900"
+                placeholder={vault.address ? "USDC amount" : "Connect Wallet"}
               />
 
               <div className="mt-5">
@@ -197,7 +199,8 @@ export default function VaultsPage() {
                   step={1}
                   value={selectedDurationIndex}
                   onChange={(event) => setSelectedDurationIndex(Number(event.target.value))}
-                  className="w-full accent-blue-600"
+                  disabled={!vault.address}
+                  className="w-full accent-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
                   aria-label="Select lock duration"
                 />
                 <div className="mt-3 grid grid-cols-3 gap-2">
@@ -206,6 +209,7 @@ export default function VaultsPage() {
                       key={option.duration}
                       type="button"
                       onClick={() => setSelectedDurationIndex(index)}
+                      disabled={!vault.address}
                       className={`rounded-md border px-3 py-2 text-sm font-medium transition ${
                         selectedDurationIndex === index
                           ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200"
@@ -235,7 +239,7 @@ export default function VaultsPage() {
                 <SummaryRow label="Settlement" value="USDC approval then lock deposit" />
               </div>
 
-              <button
+              <WalletGatedButton
                 onClick={async () => {
                   const ok = await longTerm.deposit(fixedAmount, selectedDurationDays);
                   if (ok) setFixedAmount("");
@@ -244,7 +248,7 @@ export default function VaultsPage() {
                 className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
               >
                 {longTermButtonLabel}
-              </button>
+              </WalletGatedButton>
             </div>
           </div>
         </div>
@@ -279,14 +283,13 @@ export default function VaultsPage() {
                       <td className="py-4">{position.ready ? formatTokenAmount(position.claimableYield, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data"}</td>
                       <td className="py-4">
                         {position.claimableYield > BigInt(0) ? (
-                          <button
-                            type="button"
+                          <WalletGatedButton
                             onClick={() => longTerm.claimYield(position.id)}
                             disabled={longTerm.transaction.status === "pending"}
                             className="rounded-md border border-[var(--line)] px-3 py-2 font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-slate-900"
                           >
                             {longTerm.transaction.status === "pending" ? "Claiming..." : "Claim"}
-                          </button>
+                          </WalletGatedButton>
                         ) : (
                           <StatusBadge label={position.redeemed ? "Redeemed" : "Accruing"} />
                         )}
@@ -505,13 +508,13 @@ function TransactionForm({
           ) : null}
         </div>
       ) : null}
-      <button
+      <WalletGatedButton
         onClick={onSubmit}
         disabled={busy}
         className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
       >
         {busy ? "Confirming..." : status === "confirmed" ? "Confirmed" : primaryLabel}
-      </button>
+      </WalletGatedButton>
     </div>
   );
 }

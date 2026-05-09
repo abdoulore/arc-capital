@@ -1,5 +1,8 @@
+"use client";
+
 import { ProgressBar } from "@/components/progress-bar";
 import { StatusBadge } from "@/components/status-badge";
+import { WalletGatedButton } from "@/components/wallet-gated-button";
 import { formatCurrency } from "@/lib/utils";
 
 type DealCardProps = {
@@ -54,14 +57,22 @@ export function DealCard({ deal, onInvest }: DealCardProps) {
           <dd className="mt-1 font-medium">{deal.expectedYield}</dd>
         </div>
       </dl>
-      <button
-        type="button"
-        onClick={() => onInvest?.(deal.id)}
-        disabled={closed}
-        className="mt-5 w-full rounded-md bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200 dark:disabled:bg-slate-700 dark:disabled:text-slate-300"
-      >
-        {closed ? "Closed" : "Review investment"}
-      </button>
+      {closed ? (
+        <button
+          type="button"
+          disabled
+          className="mt-5 w-full rounded-md bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200 dark:disabled:bg-slate-700 dark:disabled:text-slate-300"
+        >
+          Closed
+        </button>
+      ) : (
+        <WalletGatedButton
+          onClick={() => onInvest?.(deal.id)}
+          className="mt-5 w-full rounded-md bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200 dark:disabled:bg-slate-700 dark:disabled:text-slate-300"
+        >
+          Review investment
+        </WalletGatedButton>
+      )}
     </article>
   );
 }

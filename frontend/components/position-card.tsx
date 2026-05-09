@@ -1,4 +1,7 @@
+"use client";
+
 import { StatusBadge } from "@/components/status-badge";
+import { WalletGatedButton } from "@/components/wallet-gated-button";
 import { formatCurrency } from "@/lib/utils";
 
 type PositionCardProps = {
@@ -31,9 +34,9 @@ export function PositionCard({ title, value, yieldEarned, status, detail, action
         </div>
       </div>
       {action ? (
-        <button type="button" className="mt-5 rounded-md border border-[var(--line)] px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-900">
+        <WalletGatedButton className="mt-5 rounded-md border border-[var(--line)] px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-900">
           {action}
-        </button>
+        </WalletGatedButton>
       ) : null}
     </article>
   );

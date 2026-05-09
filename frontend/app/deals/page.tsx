@@ -5,6 +5,7 @@ import { formatUnits } from "viem";
 import { DealCard } from "@/components/deal-card";
 import { Modal } from "@/components/modal";
 import { SectionHeader } from "@/components/section-header";
+import { WalletGatedButton } from "@/components/wallet-gated-button";
 import { getVisibleDeals, toDealViews, type DealMetadata } from "@/lib/deal-ui";
 import { formatCurrency } from "@/lib/utils";
 import { useDealVault } from "@/hooks/useInvestmentContracts";
@@ -95,6 +96,18 @@ export default function DealsPage() {
             {activeClosed ? (
               <div className="mt-4 rounded-md border border-[var(--line)] bg-[var(--background)] p-3 text-sm text-[var(--muted)]">
                 This deal is closed. Historical ownership and distributions remain visible, but new investments are disabled.
+              </div>
+            ) : !address ? (
+              <div>
+                <div className="mt-4 rounded-md border border-[var(--line)] bg-slate-50 p-4 text-sm dark:bg-slate-900">
+                  <p className="font-semibold text-[var(--foreground)]">Connect Wallet</p>
+                  <p className="mt-1 leading-6 text-[var(--muted)]">
+                    Connect Wallet to review investment terms and submit a transaction.
+                  </p>
+                </div>
+                <WalletGatedButton className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                  Confirm investment
+                </WalletGatedButton>
               </div>
             ) : (
               <>

@@ -2,6 +2,7 @@
 
 import { SectionHeader } from "@/components/section-header";
 import { StatusBadge } from "@/components/status-badge";
+import { WalletGatedButton } from "@/components/wallet-gated-button";
 import { DEAL_VAULT_ABI, LONG_TERM_VAULT_ABI, LONG_TERM_VAULT_ADDRESS, USDC_ABI, USDC_ADDRESS, VAULT_ABI, VAULT_ADDRESS } from "@/app/constants";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDealVault, useLongTermVault } from "@/hooks/useInvestmentContracts";
@@ -194,14 +195,13 @@ function FixedPositionRow({
       <td className="py-4">{formatTokenAmount(claimableYield, 6, "USDC", 2)}</td>
       <td className="py-4">
         {claimableYield > BigInt(0) ? (
-          <button
-            type="button"
+          <WalletGatedButton
             onClick={() => longTerm.claimYield(BigInt(position.id))}
             disabled={longTerm.transaction.status === "pending"}
             className="rounded-md border border-[var(--line)] px-3 py-2 font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-slate-900"
           >
             {longTerm.transaction.status === "pending" ? "Claiming..." : "Claim"}
-          </button>
+          </WalletGatedButton>
         ) : (
           <StatusBadge label="Accruing" />
         )}
@@ -227,14 +227,13 @@ function DealHoldingRow({
       <td className="py-4">{formatTokenAmount(pendingYield, 6, "USDC", 2)}</td>
       <td className="py-4">
         {pendingYield > BigInt(0) ? (
-          <button
-            type="button"
+          <WalletGatedButton
             onClick={() => dealVault.claimYield()}
             disabled={dealVault.transaction.status === "pending"}
             className="rounded-md border border-[var(--line)] px-3 py-2 font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-slate-900"
           >
             {dealVault.transaction.status === "pending" ? "Claiming..." : "Claim"}
-          </button>
+          </WalletGatedButton>
         ) : (
           <StatusBadge label="Listable" />
         )}
