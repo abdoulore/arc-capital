@@ -173,8 +173,46 @@ function localActivityKey(address: string) {
 
 function mergeActivity(local: DashboardActivity[], indexed: DashboardActivity[]) {
   const byId = new Map<string, DashboardActivity>();
-  for (const item of [...local, ...indexed]) byId.set(item.id, item);
+  const byHashAndAction = new Map<string, string>();
+  for (const item of [...local, ...indexed]) {
+    const semanticKey = activitySemanticKey(item);
+    if (semanticKey) {
+      const existingId = byHashAndAction.get(semanticKey);
+      if (existingId) {
+        const existing = byId.get(existingId);
+        byId.set(existingId, pickRicherActivity(existing, item));
+        continue;
+      }
+      byHashAndAction.set(semanticKey, item.id);
+    }
+    byId.set(item.id, item);
+  }
   return [...byId.values()].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+function activitySemanticKey(item: DashboardActivity) {
+  if (!item.hash) return undefined;
+  return `${item.hash.toLowerCase()}:${normalizeAction(item.action)}`;
+}
+
+function normalizeAction(action: string) {
+  return action.toLowerCase().split(":")[0].trim();
+}
+
+function pickRicherActivity(existing: DashboardActivity | undefined, next: DashboardActivity) {
+  if (!existing) return next;
+  const existingScore = activityDetailScore(existing);
+  const nextScore = activityDetailScore(next);
+  return nextScore >= existingScore ? next : existing;
+}
+
+function activityDetailScore(item: DashboardActivity) {
+  return [
+    item.amount,
+    item.secondaryAmount,
+    item.detail && !item.detail.toLowerCase().includes("wallet-confirmed transaction") ? item.detail : undefined,
+    item.action.includes(":") ? item.action : undefined,
+  ].filter(Boolean).length;
 }
 
 function toBigInt(value: string | undefined) {

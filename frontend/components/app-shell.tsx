@@ -4,11 +4,10 @@ import "@rainbow-me/rainbowkit/styles.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount } from "wagmi";
 import { ReactNode, useEffect, useState } from "react";
-import { USDC_ABI, USDC_ADDRESS } from "@/app/constants";
 import { useAppStore } from "@/store/useAppStore";
-import { cn, formatUSDC } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { TransactionToastHost } from "@/components/transaction-toast";
 import { useIsAdmin } from "@/hooks/useAdmin";
 import { ARC_TESTNET_CHAIN_ID } from "@/lib/network";
@@ -27,13 +26,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { isAdmin } = useIsAdmin();
   const { theme, setTheme } = useAppStore();
   const [mounted, setMounted] = useState(false);
-  const { data: balance } = useReadContract({
-    address: USDC_ADDRESS,
-    abi: USDC_ABI,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    query: { refetchInterval: 8000 },
-  });
   const expectedChainId = ARC_TESTNET_CHAIN_ID;
   const networkLabel = !mounted || !address
     ? "Wallet disconnected"
@@ -84,12 +76,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             })}
           </nav>
           <div className="flex items-center gap-3">
-            <div className="hidden rounded-md border border-[var(--line)] px-3 py-2 text-sm lg:block">
-              <span className="text-[var(--muted)]">USDC</span>
-              <span className="ml-2 font-semibold">
-                {!mounted || !address ? "Not connected" : typeof balance === "bigint" ? formatUSDC(balance, 2) : "Loading"}
-              </span>
-            </div>
             <div
               className={cn(
                 "hidden rounded-md px-3 py-2 text-sm ring-1 md:block",
