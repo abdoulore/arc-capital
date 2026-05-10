@@ -270,57 +270,6 @@ export default function VaultsPage() {
             </div>
           </div>
         </div>
-        <div className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 text-sm shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <h3 className="font-semibold">Your fixed-income positions</h3>
-              <p className="mt-1 text-[var(--muted)]">Principal remains locked until maturity. Yield can be claimed separately.</p>
-            </div>
-            <StatusBadge label="Fixed APY" />
-          </div>
-          {longTerm.positions.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left">
-                <thead className="border-b border-[var(--line)] text-xs uppercase text-[var(--muted)]">
-                  <tr>
-                    <th className="py-3 font-medium">Position</th>
-                    <th className="py-3 font-medium">Principal</th>
-                    <th className="py-3 font-medium">APY</th>
-                    <th className="py-3 font-medium">Maturity</th>
-                    <th className="py-3 font-medium">Claimable yield</th>
-                    <th className="py-3 font-medium">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--line)]">
-                  {longTerm.positions.map((position) => (
-                    <tr key={position.id.toString()}>
-                      <td className="py-4 font-medium">#{position.id.toString()}</td>
-                      <td className="py-4">{position.ready ? formatTokenAmount(position.principal, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data"}</td>
-                      <td className="py-4">{position.ready ? formatPercent(Number(position.apyBps) / 100) : "Awaiting Live Data"}</td>
-                      <td className="py-4">{position.ready ? formatDate(position.maturity) : "Awaiting Live Data"}</td>
-                      <td className="py-4">{position.ready ? formatTokenAmount(position.claimableYield, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data"}</td>
-                      <td className="py-4">
-                        {position.claimableYield > BigInt(0) ? (
-                          <WalletGatedButton
-                            onClick={() => longTerm.claimYield(position.id)}
-                            disabled={longTerm.transaction.status === "pending"}
-                            className="rounded-md border border-[var(--line)] px-3 py-2 font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-slate-900"
-                          >
-                            {longTerm.transaction.status === "pending" ? "Claiming..." : "Claim"}
-                          </WalletGatedButton>
-                        ) : (
-                          <StatusBadge label={position.redeemed ? "Redeemed" : "Accruing"} />
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-[var(--muted)]">No fixed-income positions yet.</p>
-          )}
-        </div>
       </section>
 
       <Modal title="Deposit into Monthly Vault" open={depositOpen} onClose={() => setDepositOpen(false)}>

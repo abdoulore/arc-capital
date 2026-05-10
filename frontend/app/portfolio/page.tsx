@@ -99,7 +99,7 @@ export default function PortfolioPage() {
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-[var(--line)] text-[var(--muted)]">
               <tr>
-                <th className="py-3 font-medium">Position</th>
+                <th className="py-3 font-medium">Lock</th>
                 <th className="py-3 font-medium">Principal</th>
                 <th className="py-3 font-medium">APY</th>
                 <th className="py-3 font-medium">Maturity</th>
@@ -216,7 +216,7 @@ function FixedPositionRow({
 
   return (
     <tr>
-      <td className="py-4 font-medium">#{position.id}</td>
+      <td className="py-4 font-medium">{formatLockDuration(position.duration)}</td>
       <td className="py-4">{formatTokenAmount(principal, 6, "USDC", 2)}</td>
       <td className="py-4">{formatPercent(Number(position.apyBps) / 100)}</td>
       <td className="py-4">{maturity}</td>
@@ -254,7 +254,6 @@ function FixedPositionRow({
               {transactionPending ? "Working..." : "Early exit"}
             </WalletGatedButton>
           )}
-          {claimableYield === BigInt(0) && !isMature ? <StatusBadge label="Accruing" /> : null}
         </div>
       </td>
     </tr>
@@ -332,6 +331,14 @@ function formatActivitySummary(item: ActivityItem) {
   const secondary = item.secondaryAmount ? ` ${item.secondaryLabel ?? "for"} ${formatActivityAmount(item.secondaryAmount, item.secondaryUnit)}` : "";
   const label = item.amountLabel ? ` ${item.amountLabel}` : "";
   return `${primary}${label} ${item.verb}${secondary}`;
+}
+
+function formatLockDuration(duration: string) {
+  const days = Number(toBigInt(duration)) / 86_400;
+  if (days >= 1090) return "3 years";
+  if (days >= 725) return "2 years";
+  if (days >= 360) return "1 year";
+  return "Fixed term";
 }
 
 function formatActivityAmount(value = "0", unit: ActivityItem["amountUnit"]) {
