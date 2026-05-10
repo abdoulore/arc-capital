@@ -9,7 +9,7 @@ type UsersSummary = {
   topInvestorDeposits: string;
   recentUsers: number;
   highRiskActivity: string;
-  wallets: Array<{ wallet: string; totalDeposits: string; activeInvestments: number; yieldClaimed: string; marketplaceVolume: string; status: string }>;
+  wallets: Array<{ wallet: string; totalDeposits: string; portfolioValue?: string; activeInvestments: number; yieldClaimed: string; marketplaceVolume: string; status: string }>;
   marketplaceActivity: Array<{ id: string; buyer: string; amount: string; totalPrice: string; listingId: string; timestamp: string; hash: string }>;
 };
 
@@ -50,7 +50,7 @@ export default function AdminUsersPage() {
       <AdminHeader title="User monitoring" description="Operational wallet monitoring without exposing unnecessary sensitive information." />
       <div className="grid gap-4 md:grid-cols-4">
         <AdminMetric label="Active investors" value={metricValue(summary ? formatNumber(summary.activeInvestors, 0) : undefined, loading, loadError)} />
-        <AdminMetric label="Top investor deposits" value={metricValue(summary ? formatTokenAmount(toBigInt(summary.topInvestorDeposits), 6, "USDC", 2) : undefined, loading, loadError)} />
+        <AdminMetric label="Top wallet value" value={metricValue(summary ? formatTokenAmount(toBigInt(summary.topInvestorDeposits), 6, "USDC", 2) : undefined, loading, loadError)} />
         <AdminMetric label="Recent users" value={metricValue(summary ? formatNumber(summary.recentUsers, 0) : undefined, loading, loadError)} />
         <AdminMetric label="High-risk activity" value={loadError ? "Unavailable" : loading ? "Loading" : summary?.highRiskActivity ?? "0"} />
       </div>
@@ -58,14 +58,15 @@ export default function AdminUsersPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="border-b border-[var(--line)] text-[var(--muted)]">
-              <tr><th className="py-3">Wallet</th><th>Total deposits</th><th>Active investments</th><th>Yield claimed</th><th>Marketplace volume</th><th>Status</th></tr>
+              <tr><th className="py-3">Wallet</th><th>Portfolio value</th><th>Total deposits</th><th>Active investments</th><th>Yield claimed</th><th>Marketplace volume</th><th>Status</th></tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
-              {loadError ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>User analytics unavailable. Retry after the RPC recovers.</td></tr> : null}
-              {!loadError && (!summary || summary.wallets.length === 0) ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>{loading ? "Loading investor wallets." : "No investor wallets found."}</td></tr> : null}
+              {loadError ? <tr><td className="py-6 text-[var(--muted)]" colSpan={7}>User analytics unavailable. Retry after the RPC recovers.</td></tr> : null}
+              {!loadError && (!summary || summary.wallets.length === 0) ? <tr><td className="py-6 text-[var(--muted)]" colSpan={7}>{loading ? "Loading investor wallets." : "No investor wallets found."}</td></tr> : null}
               {summary?.wallets.map((wallet) => (
                 <tr key={wallet.wallet}>
                   <td className="py-3 font-mono text-xs">{formatAddress(wallet.wallet)}</td>
+                  <td>{formatTokenAmount(toBigInt(wallet.portfolioValue), 6, "USDC", 2)}</td>
                   <td>{formatTokenAmount(toBigInt(wallet.totalDeposits), 6, "USDC", 2)}</td>
                   <td>{formatNumber(wallet.activeInvestments, 0)}</td>
                   <td>{formatTokenAmount(toBigInt(wallet.yieldClaimed), 6, "USDC", 2)}</td>

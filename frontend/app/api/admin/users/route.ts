@@ -10,6 +10,7 @@ import {
 } from "@/app/constants";
 import { getLogsInChunks } from "@/lib/chain-logs";
 import { ARC_TESTNET_RPC_URL, arcTestnet } from "@/lib/network";
+import { getLatestDashboardSnapshots } from "@/lib/admin-store";
 
 const client = createPublicClient({
   chain: arcTestnet,
@@ -22,11 +23,14 @@ type WalletRow = {
   activeInvestments: number;
   yieldClaimed: bigint;
   marketplaceVolume: bigint;
+  portfolioValue: bigint;
+  lastSeen?: string;
 };
 
 export async function GET() {
   const dealAddresses = await getDealAddresses();
-  const [monthlyDeposits, monthlyWithdrawals, fixedDeposits, fixedYieldClaims, marketFills, dealInvestments, dealYieldClaims] = await Promise.all([
+  const [snapshots, monthlyDeposits, monthlyWithdrawals, fixedDeposits, fixedYieldClaims, marketFills, dealInvestments, dealYieldClaims] = await Promise.all([
+    getLatestDashboardSnapshots(),
     getLogsInChunks(client, { address: VAULT_ADDRESS, event: parseAbiItem("event Deposit(address indexed user,uint256 amount,uint256 shares)"), toBlock: "latest" }),
     getLogsInChunks(client, { address: VAULT_ADDRESS, event: parseAbiItem("event Withdraw(address indexed user,uint256 amount)"), toBlock: "latest" }),
     getLogsInChunks(client, { address: LONG_TERM_VAULT_ADDRESS, event: parseAbiItem("event Deposited(address indexed user,uint256 indexed positionId,uint256 amount,uint256 duration,uint256 apyBps)"), toBlock: "latest" }),
@@ -45,11 +49,18 @@ export async function GET() {
     const key = wallet.toLowerCase();
     const existing = wallets.get(key);
     if (existing) return existing;
-    const row: WalletRow = { wallet, totalDeposits: BigInt(0), activeInvestments: 0, yieldClaimed: BigInt(0), marketplaceVolume: BigInt(0) };
+    const row: WalletRow = { wallet, totalDeposits: BigInt(0), activeInvestments: 0, yieldClaimed: BigInt(0), marketplaceVolume: BigInt(0), portfolioValue: BigInt(0) };
     wallets.set(key, row);
     return row;
   };
 
+  for (const snapshot of snapshots) {
+    if (!isAddress(snapshot.wallet)) continue;
+    const row = touch(snapshot.wallet as `0x${string}`);
+    row.portfolioValue = maxBigInt(row.portfolioValue, toBigInt(snapshot.totalPortfolioValue));
+    row.yieldClaimed = maxBigInt(row.yieldClaimed, toBigInt(snapshot.totalYield));
+    row.lastSeen = snapshot.timestamp;
+  }
   for (const log of monthlyDeposits) touch(log.args.user!).totalDeposits += log.args.amount ?? BigInt(0);
   for (const log of fixedDeposits) {
     const row = touch(log.args.user!);
@@ -68,7 +79,7 @@ export async function GET() {
     row.marketplaceVolume += log.args.totalPrice ?? BigInt(0);
   }
 
-  const rows = [...wallets.values()].sort((a, b) => Number(b.totalDeposits - a.totalDeposits));
+  const rows = [...wallets.values()].sort((a, b) => Number((b.totalDeposits + b.portfolioValue) - (a.totalDeposits + a.portfolioValue)));
   const marketplaceRows = await Promise.all(
     marketFills
       .slice(-8)
@@ -88,9 +99,10 @@ export async function GET() {
   );
 
   return NextResponse.json({
-    activeInvestors: rows.length,
-    topInvestorDeposits: rows[0]?.totalDeposits.toString() ?? "0",
+    activeInvestors: rows.filter((row) => row.totalDeposits > BigInt(0) || row.portfolioValue > BigInt(0) || row.activeInvestments > 0).length,
+    topInvestorDeposits: rows[0] ? maxBigInt(rows[0].totalDeposits, rows[0].portfolioValue).toString() : "0",
     recentUsers: new Set([
+      ...snapshots.filter((snapshot) => isRecent(snapshot.timestamp)).map((snapshot) => snapshot.wallet.toLowerCase()),
       ...monthlyDeposits.slice(-10).map((log) => log.args.user?.toLowerCase()),
       ...fixedDeposits.slice(-10).map((log) => log.args.user?.toLowerCase()),
       ...dealInvestments.slice(-10).map((log) => log.args.investor?.toLowerCase()),
@@ -99,6 +111,7 @@ export async function GET() {
     wallets: rows.map((row) => ({
       wallet: row.wallet,
       totalDeposits: row.totalDeposits.toString(),
+      portfolioValue: row.portfolioValue.toString(),
       activeInvestments: row.activeInvestments,
       yieldClaimed: row.yieldClaimed.toString(),
       marketplaceVolume: row.marketplaceVolume.toString(),
@@ -123,4 +136,22 @@ async function getDealAddresses() {
     })),
   );
   return checked.filter((item) => item.bytecode && item.bytecode !== "0x").map((item) => item.address);
+}
+
+function toBigInt(value?: string) {
+  try {
+    return BigInt(value ?? "0");
+  } catch {
+    return BigInt(0);
+  }
+}
+
+function maxBigInt(a: bigint, b: bigint) {
+  return a > b ? a : b;
+}
+
+function isRecent(timestamp: string) {
+  const value = new Date(timestamp).getTime();
+  if (!Number.isFinite(value)) return false;
+  return Date.now() - value <= 7 * 24 * 60 * 60 * 1000;
 }

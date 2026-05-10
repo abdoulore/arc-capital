@@ -229,6 +229,46 @@ export async function getDashboardSnapshots(wallet: string) {
     .slice(-30);
 }
 
+export async function getLatestDashboardSnapshots(limit = 250) {
+  const pool = await getPostgresPool();
+  if (pool) {
+    const result = await pool.query<{
+      id: string;
+      wallet: string;
+      timestamp: Date;
+      total_portfolio_value: string;
+      total_yield: string;
+    }>(
+      `select distinct on (wallet)
+         id, wallet, timestamp, total_portfolio_value, total_yield
+       from dashboard_snapshots
+       order by wallet, timestamp desc
+       limit $1`,
+      [limit],
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      wallet: row.wallet,
+      timestamp: row.timestamp.toISOString(),
+      totalPortfolioValue: row.total_portfolio_value,
+      totalYield: row.total_yield,
+    }));
+  }
+
+  const snapshots = await readJson<DashboardSnapshot[]>("dashboard-history.json", []);
+  const byWallet = new Map<string, DashboardSnapshot>();
+  for (const snapshot of snapshots) {
+    const key = snapshot.wallet.toLowerCase();
+    const existing = byWallet.get(key);
+    if (!existing || new Date(snapshot.timestamp).getTime() > new Date(existing.timestamp).getTime()) {
+      byWallet.set(key, snapshot);
+    }
+  }
+  return [...byWallet.values()]
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, limit);
+}
+
 export async function addDashboardSnapshot(input: Omit<DashboardSnapshot, "id" | "timestamp" | "wallet"> & { wallet: string }) {
   const timestamp = new Date().toISOString();
   const normalizedWallet = input.wallet.toLowerCase();
