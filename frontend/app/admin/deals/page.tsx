@@ -23,6 +23,7 @@ export default function AdminDealsPage() {
   const [metadata, setMetadata] = useState<DealMetadata[]>([]);
   const [tab, setTab] = useState<"open" | "closed">("open");
   const [closeCandidate, setCloseCandidate] = useState<DealMetadata | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<DealMetadata | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -95,6 +96,15 @@ export default function AdminDealsPage() {
     await admin.logActivity("Close deal", `Closed ${deal.title}`);
   }
 
+  async function deleteDeal(deal: DealMetadata) {
+    const response = await fetch(`/api/admin/deals?id=${encodeURIComponent(deal.id)}`, { method: "DELETE" });
+    if (response.ok) {
+      setMetadata((current) => current.filter((item) => item.id !== deal.id));
+      setDeleteCandidate(null);
+      await admin.logActivity("Delete deal metadata", `Removed ${deal.title} from active deal views`);
+    }
+  }
+
   const allDeals = metadata;
   const summary = getDealSummary(allDeals);
   const visibleDeals = getVisibleDeals(allDeals, tab);
@@ -146,7 +156,7 @@ export default function AdminDealsPage() {
         <div className="divide-y divide-[var(--line)]">
           {visibleDeals.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No {tab} deals. Create a new deal to begin.</p> : null}
           {visibleDeals.map((deal) => (
-            <div key={deal.id} className="grid gap-3 py-3 text-sm md:grid-cols-[1fr_auto_auto] md:items-center">
+            <div key={deal.id} className="grid gap-3 py-3 text-sm md:grid-cols-[1fr_auto_auto_auto] md:items-center">
               <Link href={`/admin/deals/${deal.id}`} className="min-w-0">
                 <span className="font-medium">{deal.title}</span>
                 <span className="ml-2 rounded-full bg-slate-100 px-2 py-1 text-xs text-[var(--muted)] dark:bg-slate-900">{deal.status === "closed" ? "Closed" : "Open"}</span>
@@ -158,6 +168,13 @@ export default function AdminDealsPage() {
               ) : (
                 <AdminButton disabled={!deal.contractAddress} onClick={() => setCloseCandidate(deal)}>Close deal</AdminButton>
               )}
+              <button
+                type="button"
+                onClick={() => setDeleteCandidate(deal)}
+                className="rounded-md border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+              >
+                Delete from app
+              </button>
             </div>
           ))}
         </div>
@@ -170,6 +187,26 @@ export default function AdminDealsPage() {
             <div className="mt-5 flex justify-end gap-3">
               <button type="button" onClick={() => setCloseCandidate(null)} className="rounded-md border border-[var(--line)] px-4 py-2 text-sm font-semibold">Cancel</button>
               <AdminButton onClick={() => closeDeal(closeCandidate)}>Confirm close</AdminButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {deleteCandidate ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-xl">
+            <h2 className="text-lg font-semibold">Delete deal from app?</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              This archives {deleteCandidate.title} in the backend metadata so it no longer appears in open or closed deal lists. The onchain contract, ownership records, and transaction history remain unchanged.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button type="button" onClick={() => setDeleteCandidate(null)} className="rounded-md border border-[var(--line)] px-4 py-2 text-sm font-semibold">Cancel</button>
+              <button
+                type="button"
+                onClick={() => deleteDeal(deleteCandidate)}
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Confirm delete
+              </button>
             </div>
           </div>
         </div>

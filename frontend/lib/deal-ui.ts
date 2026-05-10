@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 
-export type DealStatus = "open" | "closed";
+export type DealStatus = "open" | "closed" | "archived";
 
 export type DealMetadata = {
   id: string;
@@ -16,6 +16,7 @@ export type DealMetadata = {
   investorCount?: number;
   fundingDeadline?: string;
   closeDate?: string;
+  archivedAt?: string;
   riskLevel?: string;
   revenueModel?: string;
   payoutSchedule?: string;
@@ -34,17 +35,19 @@ export type DealView = {
   model: string;
   term: string;
   expectedYield: string;
-  status: DealStatus;
+  status: Exclude<DealStatus, "archived">;
   closeDate?: string;
 };
 
 export function groupDeals<T extends { status?: DealStatus }>(deals: T[]) {
-  const open = deals.filter((deal) => deal.status !== "closed");
-  const closed = deals.filter((deal) => deal.status === "closed");
-  return { open, closed };
+  const archived = deals.filter((deal) => deal.status === "archived");
+  const active = deals.filter((deal) => deal.status !== "archived");
+  const open = active.filter((deal) => deal.status !== "closed");
+  const closed = active.filter((deal) => deal.status === "closed");
+  return { open, closed, archived };
 }
 
-export function getVisibleDeals<T extends { status?: DealStatus }>(deals: T[], tab: DealStatus) {
+export function getVisibleDeals<T extends { status?: DealStatus }>(deals: T[], tab: Exclude<DealStatus, "archived">) {
   const grouped = groupDeals(deals);
   return tab === "open" ? grouped.open : grouped.closed;
 }
@@ -52,14 +55,15 @@ export function getVisibleDeals<T extends { status?: DealStatus }>(deals: T[], t
 export function getDealSummary(deals: Array<{ status?: DealStatus }>) {
   const grouped = groupDeals(deals);
   return {
-    total: deals.length,
+    total: grouped.open.length + grouped.closed.length,
     open: grouped.open.length,
     closed: grouped.closed.length,
+    archived: grouped.archived.length,
   };
 }
 
 export function toDealViews(deals: DealMetadata[]): DealView[] {
-  return deals.map((deal) => {
+  return deals.filter((deal) => deal.status !== "archived").map((deal) => {
     const deadlineMs = parseDeadlineMs(deal.fundingDeadline);
     const deadlinePassed = Boolean(deadlineMs && deadlineMs <= Date.now());
     const status = deal.status === "closed" || deadlinePassed ? "closed" : "open";

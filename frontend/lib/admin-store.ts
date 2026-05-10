@@ -35,7 +35,7 @@ export type DealMetadata = {
   description?: string;
   category?: string;
   riskLevel?: string;
-  status?: "open" | "closed";
+  status?: "open" | "closed" | "archived";
   targetRaise?: string;
   totalRaised?: string;
   ownershipIssued?: string;
@@ -44,6 +44,7 @@ export type DealMetadata = {
   minInvestment?: string;
   fundingDeadline?: string;
   closeDate?: string;
+  archivedAt?: string;
   revenueModel?: string;
   payoutSchedule?: string;
 };

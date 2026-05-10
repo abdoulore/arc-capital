@@ -11,15 +11,24 @@ const client = createPublicClient({
 
 export async function GET() {
   const deals = await getDeals();
+  const archivedAddresses = new Set(
+    deals
+      .filter((deal) => deal.status === "archived")
+      .flatMap((deal) => [deal.id, deal.contractAddress])
+      .filter(Boolean)
+      .map((value) => String(value).toLowerCase()),
+  );
+  const activeDeals = deals.filter((deal) => deal.status !== "archived");
   const factoryDeals = await getFactoryDeals();
   const byAddress = new Map(
-    deals
+    activeDeals
       .filter((deal) => deal.contractAddress && isAddress(deal.contractAddress))
       .map((deal) => [deal.contractAddress!.toLowerCase(), deal]),
   );
 
   for (const address of factoryDeals) {
     const key = address.toLowerCase();
+    if (archivedAddresses.has(key)) continue;
     if (!byAddress.has(key)) {
       byAddress.set(key, {
         id: key,
@@ -31,7 +40,7 @@ export async function GET() {
   }
 
   const checkedDeals = await Promise.all(
-    [...byAddress.values(), ...deals.filter((deal) => !deal.contractAddress || !isAddress(deal.contractAddress))]
+    [...byAddress.values(), ...activeDeals.filter((deal) => !deal.contractAddress || !isAddress(deal.contractAddress))]
       .map(async (deal) => {
         if (!deal.contractAddress || !isAddress(deal.contractAddress)) return { ...deal, contractMissing: true };
         const address = deal.contractAddress as Address;
@@ -74,6 +83,33 @@ export async function PATCH(request: Request) {
   }
 
   const updated = await updateDealMetadata(body.id, body);
+  if (!updated) {
+    return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(updated);
+}
+
+export async function DELETE(request: Request) {
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "Deal id is required" }, { status: 400 });
+  }
+
+  const updated = await updateDealMetadata(id, {
+    id,
+    status: "archived",
+    archivedAt: new Date().toISOString(),
+  });
+  if (!updated && isAddress(id)) {
+    return NextResponse.json(await addDealMetadata({
+      id: id.toLowerCase(),
+      contractAddress: id,
+      title: `Archived deal ${shortAddress(id)}`,
+      status: "archived",
+      archivedAt: new Date().toISOString(),
+    }));
+  }
   if (!updated) {
     return NextResponse.json({ error: "Deal not found" }, { status: 404 });
   }
