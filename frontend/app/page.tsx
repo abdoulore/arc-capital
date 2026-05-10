@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
-import { AllocationPieChart, YieldChart } from "@/components/charts";
+import { AllocationPieChart } from "@/components/charts";
 import { MetricCard } from "@/components/metric-card";
 import { SectionHeader } from "@/components/section-header";
 import { DEAL_VAULT_ABI, LONG_TERM_VAULT_ABI, LONG_TERM_VAULT_ADDRESS, USDC_ABI, USDC_ADDRESS, VAULT_ABI, VAULT_ADDRESS } from "@/app/constants";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { ARC_TESTNET_EXPLORER_URL } from "@/lib/network";
-import { formatNumber, formatTokenAmount } from "@/lib/utils";
+import { formatTokenAmount } from "@/lib/utils";
 import { useAccount, useReadContract } from "wagmi";
 
 export default function DashboardPage() {
@@ -155,115 +153,11 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
-        <AllocationPieChart allocations={dashboard.isConnected ? liveAllocations : []} />
-        <ExecutivePanel title="Exposure summary">
-          <SummaryRow label="Monthly Vault" value={dashboard.isConnected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Awaiting Live Data"} detail="Semi-liquid vault exposure" />
-          <SummaryRow label="Fixed Income" value={dashboard.isConnected ? formatTokenAmount(fixedPrincipal, 6, "USDC", 2) : "Awaiting Live Data"} detail={`${activeFixedPositions} active positions`} />
-          <SummaryRow label="Private Deals" value={dashboard.isConnected ? formatTokenAmount(dealValue, 6, "USDC", 2) : "Awaiting Live Data"} detail={`${activeDealHoldings} active holdings`} />
-          <SummaryRow label="Vault assets" value={typeof monthlyTVL === "bigint" ? formatTokenAmount(monthlyTVL, 6, "USDC", 2) : "Awaiting Live Data"} detail="Monthly Vault TVL" />
-        </ExecutivePanel>
-      </section>
-
       <section className="mt-6">
-        <YieldChart totalYield={dashboard.isConnected ? totalYield : undefined} history={dashboard.isConnected ? dashboard.yieldHistory : []} />
-      </section>
-
-      <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <h2 className="font-semibold">Recent activity</h2>
-            <p className="text-sm text-[var(--muted)]">Financial events that changed portfolio value or liquidity.</p>
-          </div>
-        </div>
-        <div className="divide-y divide-[var(--line)]">
-          {dashboard.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
-          {dashboard.activity.slice(0, 4).map((item) => (
-            <div key={item.id} className="flex flex-col gap-2 py-3 text-sm md:flex-row md:items-start md:justify-between">
-              <div className="min-w-0">
-                <p className="font-semibold">{item.action}</p>
-                <p className="mt-1 text-[var(--foreground)]">{formatActivityValue(item)}</p>
-                {item.detail && !isWalletFallbackDetail(item.detail) ? <p className="mt-1 text-xs text-[var(--muted)]">{item.detail}</p> : null}
-              </div>
-              <div className="shrink-0 text-[var(--muted)] md:text-right">
-                <p>{formatActivityDate(item.timestamp)}</p>
-                {item.hash ? (
-                  <a
-                    href={`${ARC_TESTNET_EXPLORER_URL}/tx/${item.hash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-1 block font-mono text-xs text-blue-600 hover:underline dark:text-blue-400"
-                  >
-                    View transaction
-                  </a>
-                ) : null}
-              </div>
-            </div>
-          ))}
-        </div>
+        <AllocationPieChart allocations={dashboard.isConnected ? liveAllocations : []} />
       </section>
     </div>
   );
-}
-
-function ExecutivePanel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-      <h2 className="font-semibold">{title}</h2>
-      <div className="mt-4 divide-y divide-[var(--line)]">{children}</div>
-    </section>
-  );
-}
-
-function SummaryRow({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-3 text-sm first:pt-0 last:pb-0">
-      <div>
-        <p className="font-medium">{label}</p>
-        <p className="mt-1 text-xs text-[var(--muted)]">{detail}</p>
-      </div>
-      <p className="shrink-0 text-right font-semibold">{value}</p>
-    </div>
-  );
-}
-
-type ActivityItem = ReturnType<typeof useDashboardData>["activity"][number];
-
-function formatActivityValue(item: ActivityItem) {
-  if (!item.amount) return "Value pending";
-  const primary = formatActivityAmount(item.amount, item.amountUnit);
-  const secondary = item.secondaryAmount ? ` ${item.secondaryLabel ?? "for"} ${formatActivityAmount(item.secondaryAmount, item.secondaryUnit)}` : "";
-  const label = item.amountLabel ? ` ${item.amountLabel}` : "";
-  return `${primary}${label} ${item.verb}${secondary}`;
-}
-
-function isWalletFallbackDetail(detail: string) {
-  return detail.toLowerCase().includes("wallet-confirmed transaction");
-}
-
-function formatActivityDate(timestamp: string) {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  return date.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function formatActivityAmount(value = "0", unit: ActivityItem["amountUnit"]) {
-  const amount = toBigInt(value);
-  if (unit === "shares") return `${formatNumber(Number(amount), 0)} shares`;
-  return formatTokenAmount(amount, 6, "USDC", 2);
-}
-
-function toBigInt(value: string) {
-  try {
-    return BigInt(value);
-  } catch {
-    return BigInt(0);
-  }
 }
 
 type DashboardData = ReturnType<typeof useDashboardData>;
