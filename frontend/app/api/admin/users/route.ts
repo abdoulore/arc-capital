@@ -79,7 +79,9 @@ export async function GET() {
     row.marketplaceVolume += log.args.totalPrice ?? BigInt(0);
   }
 
-  const rows = [...wallets.values()].sort((a, b) => Number((b.totalDeposits + b.portfolioValue) - (a.totalDeposits + a.portfolioValue)));
+  const rows = [...wallets.values()]
+    .filter((row) => row.totalDeposits > BigInt(0) || row.portfolioValue > BigInt(0) || row.activeInvestments > 0 || row.yieldClaimed > BigInt(0) || row.marketplaceVolume > BigInt(0))
+    .sort((a, b) => Number((b.totalDeposits + b.portfolioValue) - (a.totalDeposits + a.portfolioValue)));
   const marketplaceRows = await Promise.all(
     marketFills
       .slice(-8)
@@ -108,6 +110,7 @@ export async function GET() {
       ...dealInvestments.slice(-10).map((log) => log.args.investor?.toLowerCase()),
     ].filter(Boolean)).size,
     highRiskActivity: "0",
+    analyticsComplete: true,
     wallets: rows.map((row) => ({
       wallet: row.wallet,
       totalDeposits: row.totalDeposits.toString(),
@@ -115,7 +118,7 @@ export async function GET() {
       activeInvestments: row.activeInvestments,
       yieldClaimed: row.yieldClaimed.toString(),
       marketplaceVolume: row.marketplaceVolume.toString(),
-      status: "Active",
+      status: row.activeInvestments > 0 ? "Invested" : row.portfolioValue > BigInt(0) ? "Holding value" : "Yield only",
     })),
     marketplaceActivity: marketplaceRows,
     withdrawals: monthlyWithdrawals.length,

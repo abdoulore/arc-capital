@@ -206,27 +206,56 @@ function FixedPositionRow({
 }) {
   const longTerm = useLongTermVault();
   const claimableYield = toBigInt(position.claimableYield);
+  const principal = toBigInt(position.principal);
+  const maturitySeconds = toBigInt(position.maturity);
+  const isMature = maturitySeconds > BigInt(0) && maturitySeconds <= BigInt(Math.floor(Date.now() / 1000));
+  const earlyExitReturn = (principal * BigInt(9000)) / BigInt(10000);
+  const earlyExitPenalty = principal - earlyExitReturn;
   const maturity = formatDate(BigInt(position.maturity));
+  const transactionPending = longTerm.transaction.status === "pending";
 
   return (
     <tr>
       <td className="py-4 font-medium">#{position.id}</td>
-      <td className="py-4">{formatTokenAmount(toBigInt(position.principal), 6, "USDC", 2)}</td>
+      <td className="py-4">{formatTokenAmount(principal, 6, "USDC", 2)}</td>
       <td className="py-4">{formatPercent(Number(position.apyBps) / 100)}</td>
       <td className="py-4">{maturity}</td>
       <td className="py-4">{formatTokenAmount(claimableYield, 6, "USDC", 2)}</td>
       <td className="py-4">
-        {claimableYield > BigInt(0) ? (
-          <WalletGatedButton
-            onClick={() => longTerm.claimYield(BigInt(position.id))}
-            disabled={longTerm.transaction.status === "pending"}
-            className="rounded-md border border-[var(--line)] px-3 py-2 font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-slate-900"
-          >
-            {longTerm.transaction.status === "pending" ? "Claiming..." : "Claim"}
-          </WalletGatedButton>
-        ) : (
-          <StatusBadge label="Accruing" />
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {claimableYield > BigInt(0) ? (
+            <WalletGatedButton
+              onClick={() => longTerm.claimYield(BigInt(position.id))}
+              disabled={transactionPending}
+              className="rounded-md border border-[var(--line)] px-3 py-2 font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-slate-900"
+            >
+              {transactionPending ? "Working..." : "Claim"}
+            </WalletGatedButton>
+          ) : null}
+          {isMature ? (
+            <WalletGatedButton
+              onClick={() => longTerm.redeemAtMaturity(BigInt(position.id))}
+              disabled={transactionPending}
+              className="rounded-md bg-blue-600 px-3 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {transactionPending ? "Working..." : "Redeem"}
+            </WalletGatedButton>
+          ) : (
+            <WalletGatedButton
+              onClick={() => {
+                const ok = window.confirm(
+                  `Early exit returns ${formatTokenAmount(earlyExitReturn, 6, "USDC", 2)} and sends ${formatTokenAmount(earlyExitPenalty, 6, "USDC", 2)} as penalty. Continue?`,
+                );
+                if (ok) void longTerm.earlyExit(BigInt(position.id));
+              }}
+              disabled={transactionPending || principal === BigInt(0)}
+              className="rounded-md border border-amber-300 px-3 py-2 font-medium text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/30"
+            >
+              {transactionPending ? "Working..." : "Early exit"}
+            </WalletGatedButton>
+          )}
+          {claimableYield === BigInt(0) && !isMature ? <StatusBadge label="Accruing" /> : null}
+        </div>
       </td>
     </tr>
   );

@@ -9,6 +9,7 @@ type UsersSummary = {
   topInvestorDeposits: string;
   recentUsers: number;
   highRiskActivity: string;
+  analyticsComplete?: boolean;
   wallets: Array<{ wallet: string; totalDeposits: string; portfolioValue?: string; activeInvestments: number; yieldClaimed: string; marketplaceVolume: string; status: string }>;
   marketplaceActivity: Array<{ id: string; buyer: string; amount: string; totalPrice: string; listingId: string; timestamp: string; hash: string }>;
 };
@@ -52,7 +53,7 @@ export default function AdminUsersPage() {
         <AdminMetric label="Active investors" value={metricValue(summary ? formatNumber(summary.activeInvestors, 0) : undefined, loading, loadError)} />
         <AdminMetric label="Top wallet value" value={metricValue(summary ? formatTokenAmount(toBigInt(summary.topInvestorDeposits), 6, "USDC", 2) : undefined, loading, loadError)} />
         <AdminMetric label="Recent users" value={metricValue(summary ? formatNumber(summary.recentUsers, 0) : undefined, loading, loadError)} />
-        <AdminMetric label="High-risk activity" value={loadError ? "Unavailable" : loading ? "Loading" : summary?.highRiskActivity ?? "0"} />
+        <AdminMetric label="High-risk activity" value={loadError ? "Unavailable" : summary?.highRiskActivity ?? "0"} />
       </div>
       <AdminPanel title="Investor wallets">
         <div className="overflow-x-auto">
@@ -81,7 +82,7 @@ export default function AdminUsersPage() {
       <AdminPanel title="Marketplace activity">
         <div className="divide-y divide-[var(--line)]">
           {loadError ? <p className="py-6 text-sm text-[var(--muted)]">Marketplace user activity unavailable. Retry after the RPC recovers.</p> : null}
-          {!loadError && (!summary || summary.marketplaceActivity.length === 0) ? <p className="py-6 text-sm text-[var(--muted)]">{loading ? "Loading marketplace activity." : "No marketplace fills recorded."}</p> : null}
+          {!loadError && (!summary || summary.marketplaceActivity.length === 0) ? <p className="py-6 text-sm text-[var(--muted)]">{loading && !summary ? "Loading marketplace activity." : "No marketplace fills recorded."}</p> : null}
           {summary?.marketplaceActivity.map((item) => (
             <div key={item.id} className="flex flex-col gap-1 py-3 text-sm md:flex-row md:items-center md:justify-between">
               <div>

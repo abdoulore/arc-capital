@@ -401,6 +401,74 @@ export function useLongTermVault() {
     });
   }
 
+  async function redeemAtMaturity(positionId: bigint) {
+    const position = positions.find((item) => item.id === positionId);
+    const claimableYield = position?.claimableYield ?? BigInt(0);
+    const principal = position?.principal ?? BigInt(0);
+    return runTransaction({
+      label: "Fixed-income maturity redemption",
+      addToast,
+      updateToast,
+      publicClient,
+      account: address,
+      setTransaction,
+      steps: [
+        () =>
+          writeContractAsync({
+            address: LONG_TERM_VAULT_ADDRESS,
+            abi: LONG_TERM_VAULT_ABI,
+            functionName: "redeemAtMaturity",
+            args: [positionId],
+          }),
+      ],
+      afterSuccess: () => refreshQueries([userPositions, positionReads]),
+      activity: {
+        amount: principal.toString(),
+        amountLabel: "principal",
+        amountUnit: "USDC",
+        secondaryAmount: claimableYield.toString(),
+        secondaryLabel: "plus",
+        secondaryUnit: "USDC",
+        verb: "redeemed",
+        detail: `Position #${positionId.toString()}`,
+      },
+    });
+  }
+
+  async function earlyExit(positionId: bigint) {
+    const principal = positions.find((position) => position.id === positionId)?.principal ?? BigInt(0);
+    const returnedPrincipal = (principal * BigInt(9000)) / BigInt(10000);
+    const penalty = principal - returnedPrincipal;
+    return runTransaction({
+      label: "Fixed-income early exit",
+      addToast,
+      updateToast,
+      publicClient,
+      account: address,
+      setTransaction,
+      steps: [
+        () =>
+          writeContractAsync({
+            address: LONG_TERM_VAULT_ADDRESS,
+            abi: LONG_TERM_VAULT_ABI,
+            functionName: "earlyExit",
+            args: [positionId],
+          }),
+      ],
+      afterSuccess: () => refreshQueries([userPositions, positionReads]),
+      activity: {
+        amount: returnedPrincipal.toString(),
+        amountLabel: "principal returned",
+        amountUnit: "USDC",
+        secondaryAmount: penalty.toString(),
+        secondaryLabel: "after",
+        secondaryUnit: "USDC",
+        verb: "exited",
+        detail: `Position #${positionId.toString()}`,
+      },
+    });
+  }
+
   return {
     tranches: [oneYear.data, twoYears.data, threeYears.data],
     userPositions: userPositions.data ?? [],
@@ -408,6 +476,8 @@ export function useLongTermVault() {
     transaction,
     deposit,
     claimYield,
+    redeemAtMaturity,
+    earlyExit,
   };
 }
 
