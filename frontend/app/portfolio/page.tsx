@@ -35,7 +35,7 @@ export default function PortfolioPage() {
       <SectionHeader
         eyebrow="Portfolio"
         title="Positions and liquidity"
-        description="See what is liquid, what is locked, what can be listed, and what has claimable yield."
+        description="Holdings, maturities, claimable yield, and wallet-confirmed activity for the connected account."
       />
 
       {!connected ? (
@@ -47,13 +47,13 @@ export default function PortfolioPage() {
         </div>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-3 md:grid-cols-3">
         <PortfolioMetric label="Total value" value={connected ? formatTokenAmount(totalValue, 6, "USDC", 2) : "Awaiting Live Data"} />
         <PortfolioMetric label="Wallet liquidity" value={connected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Awaiting Live Data"} />
         <PortfolioMetric label="Claimable yield" value={connected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data"} />
       </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-3">
+      <section className="mt-5 grid gap-3 lg:grid-cols-3">
         <PositionPanel
           title="Monthly Vault"
           status="Semi-liquid"
@@ -86,11 +86,11 @@ export default function PortfolioPage() {
         />
       </section>
 
-      <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+      <section className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold">Fixed-income positions</h2>
-            <p className="text-sm text-[var(--muted)]">Deterministic monthly yield by position. Principal remains locked until maturity.</p>
+            <p className="text-sm text-[var(--muted)]">Position-level principal, APY, maturity, and claimable income.</p>
           </div>
           <StatusBadge label="Fixed APY" />
         </div>
@@ -118,11 +118,11 @@ export default function PortfolioPage() {
         )}
       </section>
 
-      <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+      <section className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold">Deal positions</h2>
-            <p className="text-sm text-[var(--muted)]">Positions available for revenue distributions and secondary listing.</p>
+            <p className="text-sm text-[var(--muted)]">Ownership shares, current value, revenue claims, and marketplace readiness.</p>
           </div>
           <StatusBadge label="Deal Shares" />
         </div>
@@ -150,34 +150,50 @@ export default function PortfolioPage() {
         )}
       </section>
 
-      <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+      <section className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
         <h2 className="font-semibold">Transaction history</h2>
-        <div className="mt-3 divide-y divide-[var(--line)]">
-          {!connected ? <p className="py-6 text-sm text-[var(--muted)]">Awaiting Live Data</p> : null}
-          {connected && portfolio.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
-          {portfolio.activity.map((item) => (
-            <div key={item.id} className="flex flex-col gap-1 py-3 text-sm md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="font-medium">{item.action}</p>
-                <p className="text-[var(--muted)]">{formatActivitySummary(item)}</p>
-                {item.detail && !item.detail.toLowerCase().includes("wallet-confirmed transaction") ? <p className="mt-1 text-xs text-[var(--muted)]">{item.detail}</p> : null}
-              </div>
-              <div className="text-[var(--muted)] md:text-right">
-                <p>{formatDate(item.timestamp)}</p>
-                {item.hash ? (
-                  <a
-                    href={`${ARC_TESTNET_EXPLORER_URL}/tx/${item.hash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-1 block font-mono text-xs text-blue-600 hover:underline dark:text-blue-400"
-                  >
-                    View transaction
-                  </a>
-                ) : null}
-              </div>
-            </div>
-          ))}
-        </div>
+        {!connected ? <p className="py-6 text-sm text-[var(--muted)]">Awaiting Live Data</p> : null}
+        {connected && portfolio.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
+        {connected && portfolio.activity.length > 0 ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="border-b border-[var(--line)] text-[var(--muted)]">
+                <tr>
+                  <th className="py-3 font-medium">Activity</th>
+                  <th className="py-3 font-medium">Value</th>
+                  <th className="py-3 font-medium">Date</th>
+                  <th className="py-3 text-right font-medium">Record</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--line)]">
+                {portfolio.activity.map((item) => (
+                  <tr key={item.id}>
+                    <td className="py-3">
+                      <p className="font-medium">{item.action}</p>
+                      {item.detail && !item.detail.toLowerCase().includes("wallet-confirmed transaction") ? <p className="mt-1 text-xs text-[var(--muted)]">{item.detail}</p> : null}
+                    </td>
+                    <td className="py-3 font-medium">{formatActivitySummary(item)}</td>
+                    <td className="py-3 text-[var(--muted)]">{formatDate(item.timestamp)}</td>
+                    <td className="py-3 text-right">
+                      {item.hash ? (
+                        <a
+                          href={`${ARC_TESTNET_EXPLORER_URL}/tx/${item.hash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-xs text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          Explorer
+                        </a>
+                      ) : (
+                        <span className="text-[var(--muted)]">Pending</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </section>
     </div>
   );
@@ -250,16 +266,16 @@ function DealHoldingRow({
 
 function PortfolioMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-      <p className="text-sm text-[var(--muted)]">{label}</p>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
+    <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
+      <p className="text-xs font-medium uppercase text-[var(--muted)]">{label}</p>
+      <p className="mt-2 text-xl font-semibold">{value}</p>
     </div>
   );
 }
 
 function PositionPanel({ title, status, value, detail, rows }: { title: string; status: string; value: string; detail: string; rows: Array<[string, string]> }) {
   return (
-    <article className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+    <article className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="font-semibold">{title}</h3>
@@ -267,8 +283,8 @@ function PositionPanel({ title, status, value, detail, rows }: { title: string; 
         </div>
         <StatusBadge label={status} />
       </div>
-      <p className="mt-5 text-2xl font-semibold">{value}</p>
-      <div className="mt-4 space-y-2 text-sm">
+      <p className="mt-4 text-xl font-semibold">{value}</p>
+      <div className="mt-3 space-y-2 text-sm">
         {rows.map(([label, content]) => (
           <div key={label} className="flex justify-between gap-4">
             <span className="text-[var(--muted)]">{label}</span>

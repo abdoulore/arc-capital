@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { AllocationPieChart, YieldChart } from "@/components/charts";
 import { MetricCard } from "@/components/metric-card";
 import { SectionHeader } from "@/components/section-header";
@@ -109,7 +110,7 @@ export default function DashboardPage() {
       <SectionHeader
         eyebrow="Private banking, onchain"
         title="Capital overview"
-        description="Track semi-liquid vault exposure, fixed-income locks, and private deal cash flows in one place."
+        description="An executive snapshot of available cash, invested capital, and income currently available."
       />
 
       {!dashboard.isConnected ? (
@@ -138,32 +139,34 @@ export default function DashboardPage() {
 
       <section className="grid gap-4 md:grid-cols-3">
         <MetricCard
-          label="Total portfolio value"
+          label="Portfolio value"
           value={dashboard.isConnected ? formatTokenAmount(totalPortfolioValue, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail={dashboard.isConnected ? "Wallet balance plus live positions" : "Wallet-specific data"}
+          detail={dashboard.isConnected ? "Cash plus live positions" : "Wallet-specific data"}
         />
         <MetricCard
-          label="Claimable yield"
+          label="Available income"
           value={dashboard.isConnected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail={dashboard.isConnected ? "Fixed-income and deal revenue available now" : "Wallet-specific data"}
+          detail={dashboard.isConnected ? "Claimable fixed-income and deal revenue" : "Wallet-specific data"}
         />
         <MetricCard
-          label="Available liquidity"
+          label="Wallet cash"
           value={dashboard.isConnected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Awaiting Live Data"}
           detail={dashboard.isConnected ? "USDC currently in wallet" : "Wallet-specific data"}
         />
       </section>
 
-      <section className="mt-6 grid gap-4 md:grid-cols-4">
-        <MetricCard label="Monthly Vault" value={dashboard.isConnected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? "Live share value" : "Wallet-specific data"} />
-        <MetricCard label="Fixed Income" value={dashboard.isConnected ? formatTokenAmount(fixedPrincipal, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? `${activeFixedPositions} active positions` : "Wallet-specific data"} />
-        <MetricCard label="Deal Holdings" value={dashboard.isConnected ? formatTokenAmount(dealValue, 6, "USDC", 2) : "Awaiting Live Data"} detail={dashboard.isConnected ? `${activeDealHoldings} active holdings` : "Wallet-specific data"} />
-        <MetricCard label="Monthly Vault TVL" value={typeof monthlyTVL === "bigint" ? formatTokenAmount(monthlyTVL, 6, "USDC", 2) : "Awaiting Live Data"} detail="Live vault assets" />
+      <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
+        <AllocationPieChart allocations={dashboard.isConnected ? liveAllocations : []} />
+        <ExecutivePanel title="Exposure summary">
+          <SummaryRow label="Monthly Vault" value={dashboard.isConnected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Awaiting Live Data"} detail="Semi-liquid vault exposure" />
+          <SummaryRow label="Fixed Income" value={dashboard.isConnected ? formatTokenAmount(fixedPrincipal, 6, "USDC", 2) : "Awaiting Live Data"} detail={`${activeFixedPositions} active positions`} />
+          <SummaryRow label="Private Deals" value={dashboard.isConnected ? formatTokenAmount(dealValue, 6, "USDC", 2) : "Awaiting Live Data"} detail={`${activeDealHoldings} active holdings`} />
+          <SummaryRow label="Vault assets" value={typeof monthlyTVL === "bigint" ? formatTokenAmount(monthlyTVL, 6, "USDC", 2) : "Awaiting Live Data"} detail="Monthly Vault TVL" />
+        </ExecutivePanel>
       </section>
 
-      <section className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
+      <section className="mt-6">
         <YieldChart totalYield={dashboard.isConnected ? totalYield : undefined} history={dashboard.isConnected ? dashboard.yieldHistory : []} />
-        <AllocationPieChart allocations={dashboard.isConnected ? liveAllocations : []} />
       </section>
 
       <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
@@ -175,8 +178,8 @@ export default function DashboardPage() {
         </div>
         <div className="divide-y divide-[var(--line)]">
           {dashboard.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
-          {dashboard.activity.slice(0, 6).map((item) => (
-            <div key={item.id} className="flex flex-col gap-3 py-4 text-sm md:flex-row md:items-start md:justify-between">
+          {dashboard.activity.slice(0, 4).map((item) => (
+            <div key={item.id} className="flex flex-col gap-2 py-3 text-sm md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <p className="font-semibold">{item.action}</p>
                 <p className="mt-1 text-[var(--foreground)]">{formatActivityValue(item)}</p>
@@ -199,6 +202,27 @@ export default function DashboardPage() {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function ExecutivePanel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+      <h2 className="font-semibold">{title}</h2>
+      <div className="mt-4 divide-y divide-[var(--line)]">{children}</div>
+    </section>
+  );
+}
+
+function SummaryRow({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3 text-sm first:pt-0 last:pb-0">
+      <div>
+        <p className="font-medium">{label}</p>
+        <p className="mt-1 text-xs text-[var(--muted)]">{detail}</p>
+      </div>
+      <p className="shrink-0 text-right font-semibold">{value}</p>
     </div>
   );
 }
