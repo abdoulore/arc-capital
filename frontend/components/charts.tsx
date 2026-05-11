@@ -74,30 +74,42 @@ export function YieldChart({ totalYield, history = [] }: { totalYield?: bigint; 
 
 export function AllocationPieChart({ allocations = [] }: { allocations?: DashboardAllocation[] }) {
   const total = allocations.reduce((sum, item) => sum + item.value, BigInt(0));
+  const tones = [
+    { bg: "bg-blue-500", icon: "text-blue-300", panel: "bg-blue-500/15", ring: "ring-blue-400/20" },
+    { bg: "bg-violet-500", icon: "text-violet-300", panel: "bg-violet-500/15", ring: "ring-violet-400/20" },
+    { bg: "bg-emerald-500", icon: "text-emerald-300", panel: "bg-emerald-500/15", ring: "ring-emerald-400/20" },
+    { bg: "bg-orange-500", icon: "text-orange-300", panel: "bg-orange-500/15", ring: "ring-orange-400/20" },
+  ];
 
   return (
-    <div className="h-72 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-      <h2 className="font-semibold">Allocation</h2>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-7 shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+      <h2 className="text-xl font-semibold">Allocation</h2>
       {allocations.length === 0 || total === BigInt(0) ? (
-        <div className="mt-4 grid h-[80%] place-items-center rounded-md border border-dashed border-[var(--line)] text-sm text-[var(--muted)]">
+        <div className="mt-5 grid h-48 place-items-center rounded-xl border border-dashed border-white/15 text-sm text-[var(--muted)]">
           Awaiting Live Data
         </div>
       ) : (
-        <div className="mt-4 space-y-3">
-          {allocations.map((item) => {
+        <div className="mt-6 space-y-6">
+          {allocations.map((item, index) => {
             const percent = Number((item.value * BigInt(10_000)) / total) / 100;
+            const tone = tones[index % tones.length];
             return (
-              <div key={item.label}>
-                <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-                  <span className="font-medium">{item.label}</span>
-                  <span className="text-[var(--muted)]">{formatPercent(percent)}</span>
+              <div key={item.label} className="grid gap-4 md:grid-cols-[220px_1fr_130px] md:items-center">
+                <div className="flex items-center gap-4">
+                  <div className={`grid h-12 w-12 place-items-center rounded-2xl ring-1 ${tone.panel} ${tone.ring}`}>
+                    <span className={`text-lg font-semibold ${tone.icon}`}>{item.label.slice(0, 1)}</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">{item.label}</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{item.detail}</p>
+                  </div>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                  <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.max(1, percent)}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                  <div className={`h-full rounded-full ${tone.bg} shadow-[0_0_22px_currentColor]`} style={{ width: `${Math.max(1, percent)}%` }} />
                 </div>
-                <div className="mt-1 flex justify-between gap-3 text-xs text-[var(--muted)]">
-                  <span>{item.detail}</span>
-                  <span>{formatTokenAmount(item.value, 6, "USDC", 2)}</span>
+                <div className="text-left md:text-right">
+                  <p className="text-lg font-semibold">{formatPercent(percent)}</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">{formatTokenAmount(item.value, 6, "USDC", 2)}</p>
                 </div>
               </div>
             );

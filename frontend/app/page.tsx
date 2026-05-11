@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AllocationPieChart } from "@/components/charts";
-import { MetricCard } from "@/components/metric-card";
-import { SectionHeader } from "@/components/section-header";
 import { DEAL_VAULT_ABI, LONG_TERM_VAULT_ABI, LONG_TERM_VAULT_ADDRESS, USDC_ABI, USDC_ADDRESS, VAULT_ABI, VAULT_ADDRESS } from "@/app/constants";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { formatTokenAmount } from "@/lib/utils";
@@ -102,60 +100,156 @@ export default function DashboardPage() {
     [activeDealHoldings, activeFixedPositions, dealValue, dealYield, fixedPrincipal, fixedYield, monthlyValue, walletLiquidity],
   );
   const showSetupNotice = dashboard.isConnected && !dashboard.loading && !dashboard.hasPortfolioData;
+  const dashboardMetrics = [
+    {
+      label: "Portfolio value",
+      value: dashboard.isConnected ? formatTokenAmount(totalPortfolioValue, 6, "USDC", 2) : "Awaiting Live Data",
+      detail: dashboard.isConnected ? "Cash plus live positions" : "Wallet-specific data",
+      tone: "violet" as const,
+      icon: "↗",
+    },
+    {
+      label: "Available income",
+      value: dashboard.isConnected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data",
+      detail: dashboard.isConnected ? "Claimable fixed-income and deal revenue" : "Wallet-specific data",
+      tone: "emerald" as const,
+      icon: "▣",
+    },
+    {
+      label: "Wallet cash",
+      value: dashboard.isConnected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Awaiting Live Data",
+      detail: dashboard.isConnected ? "USDC currently in wallet" : "Wallet-specific data",
+      tone: "blue" as const,
+      icon: "□",
+    },
+  ];
 
   return (
     <div>
-      <SectionHeader
-        eyebrow="Private banking, onchain"
-        title="Capital overview"
-        description="An executive snapshot of available cash, invested capital, and income currently available."
-      />
+      <section className="relative mb-10 overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.02] px-6 py-10 shadow-[0_30px_90px_rgba(0,0,0,0.32)] sm:px-10 lg:px-14">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_35%,rgba(124,92,255,0.22),transparent_24%),radial-gradient(circle_at_60%_30%,rgba(77,141,255,0.14),transparent_28%)]" />
+        <div className="relative grid gap-10 lg:grid-cols-[1fr_460px] lg:items-center">
+          <div>
+            <p className="text-sm font-semibold uppercase text-blue-300">Private banking, onchain</p>
+            <h1 className="mt-5 text-5xl font-semibold tracking-normal text-white">Capital Overview</h1>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
+              An executive snapshot of available cash, invested capital, and income currently available.
+            </p>
+          </div>
+          <HeroAnalyticsCard />
+        </div>
+      </section>
 
       {!dashboard.isConnected ? (
-        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
+        <div className="mb-5 rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm text-blue-100">
           <p className="font-semibold">Connect Wallet</p>
-          <p className="mt-1 text-blue-800 dark:text-blue-200">
+          <p className="mt-1 text-blue-200">
             Portfolio value, yield, positions, and activity unlock after wallet connection.
           </p>
         </div>
       ) : null}
 
       {dashboard.error ? (
-        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+        <div className="mb-5 rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4 text-sm text-amber-100">
           {dashboard.error}
         </div>
       ) : null}
 
       {showSetupNotice ? (
-        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
+        <div className="mb-5 rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm text-blue-100">
           <p className="font-semibold">No Activity Yet</p>
-          <p className="mt-1 text-blue-800 dark:text-blue-200">
+          <p className="mt-1 text-blue-200">
             Fund this wallet with Arc Testnet USDC, confirm the deployed contract addresses are configured, then make a deposit or deal investment.
           </p>
         </div>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <MetricCard
-          label="Portfolio value"
-          value={dashboard.isConnected ? formatTokenAmount(totalPortfolioValue, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail={dashboard.isConnected ? "Cash plus live positions" : "Wallet-specific data"}
-        />
-        <MetricCard
-          label="Available income"
-          value={dashboard.isConnected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail={dashboard.isConnected ? "Claimable fixed-income and deal revenue" : "Wallet-specific data"}
-        />
-        <MetricCard
-          label="Wallet cash"
-          value={dashboard.isConnected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail={dashboard.isConnected ? "USDC currently in wallet" : "Wallet-specific data"}
-        />
+      <section className="grid gap-5 md:grid-cols-3">
+        {dashboardMetrics.map((metric) => (
+          <DashboardMetricCard key={metric.label} {...metric} />
+        ))}
       </section>
 
       <section className="mt-6">
         <AllocationPieChart allocations={dashboard.isConnected ? liveAllocations : []} />
       </section>
+    </div>
+  );
+}
+
+function DashboardMetricCard({
+  label,
+  value,
+  detail,
+  tone,
+  icon,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "violet" | "emerald" | "blue";
+  icon: string;
+}) {
+  const palette = {
+    violet: "border-violet-400/25 shadow-violet-950/30 text-violet-300 bg-violet-500/10",
+    emerald: "border-emerald-400/20 shadow-emerald-950/20 text-emerald-300 bg-emerald-500/10",
+    blue: "border-blue-400/20 shadow-blue-950/20 text-blue-300 bg-blue-500/10",
+  }[tone];
+
+  return (
+    <article className={`relative overflow-hidden rounded-2xl border bg-white/[0.035] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.28)] ${palette}`}>
+      <div className="relative z-10 flex items-start gap-5">
+        <div className={`grid h-16 w-16 place-items-center rounded-2xl border ${palette}`}>
+          <span className="text-3xl font-semibold">{icon}</span>
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-base text-slate-300">{label}</p>
+            <span className="grid h-4 w-4 place-items-center rounded-full border border-white/20 text-[10px] text-slate-400" title={detail}>i</span>
+          </div>
+          <p className="mt-4 text-3xl font-semibold text-white">{value}</p>
+          <p className="mt-4 text-sm leading-6 text-slate-400">{detail}</p>
+        </div>
+      </div>
+      <div className="absolute bottom-6 right-6 h-12 w-32 opacity-70">
+        <svg viewBox="0 0 140 48" className="h-full w-full">
+          <path d="M2 42 C18 38, 22 30, 35 33 S52 35, 65 24 84 30, 97 18 111 20, 138 5" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      </div>
+    </article>
+  );
+}
+
+function HeroAnalyticsCard() {
+  return (
+    <div className="hidden lg:block">
+      <div className="rounded-2xl border border-white/10 bg-[#11182a]/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+        <div className="mb-5 flex items-center justify-between">
+          <p className="text-sm text-slate-300">Portfolio Growth</p>
+          <span className="rounded-lg bg-emerald-400/10 px-3 py-1 text-sm text-emerald-300">+12.58%</span>
+        </div>
+        <div className="mb-4 flex gap-6 text-xs text-slate-400">
+          {["1W", "1M", "3M", "1Y", "ALL"].map((item) => (
+            <span key={item} className={item === "1M" ? "rounded-md bg-blue-500/15 px-2 py-1 text-blue-200" : "py-1"}>{item}</span>
+          ))}
+        </div>
+        <svg viewBox="0 0 420 150" className="h-40 w-full">
+          <defs>
+            <linearGradient id="arcHeroLine" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#7c5cff" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#7c5cff" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {Array.from({ length: 7 }).map((_, index) => (
+            <line key={`h-${index}`} x1="0" x2="420" y1={20 + index * 18} y2={20 + index * 18} stroke="rgba(255,255,255,0.05)" />
+          ))}
+          {Array.from({ length: 9 }).map((_, index) => (
+            <line key={`v-${index}`} y1="0" y2="150" x1={index * 52} x2={index * 52} stroke="rgba(255,255,255,0.04)" />
+          ))}
+          <path d="M0 118 C28 106 34 83 62 88 C86 92 93 70 116 76 C140 82 152 98 178 107 C205 116 216 83 244 76 C266 70 276 42 298 52 C326 64 332 90 360 72 C385 55 390 38 420 30 L420 150 L0 150 Z" fill="url(#arcHeroLine)" />
+          <path d="M0 118 C28 106 34 83 62 88 C86 92 93 70 116 76 C140 82 152 98 178 107 C205 116 216 83 244 76 C266 70 276 42 298 52 C326 64 332 90 360 72 C385 55 390 38 420 30" fill="none" stroke="#8b6cff" strokeWidth="3" />
+        </svg>
+      </div>
     </div>
   );
 }
