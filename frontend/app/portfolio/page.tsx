@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { SectionHeader } from "@/components/section-header";
 import { StatusBadge } from "@/components/status-badge";
 import { WalletGatedButton } from "@/components/wallet-gated-button";
@@ -12,10 +13,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
 
 export default function PortfolioPage() {
+  const router = useRouter();
   const portfolio = useDashboardData();
-  const { address } = useAccount();
+  const { address, isConnected, status } = useAccount();
   const longTerm = useLongTermVault();
   const [earlyExitPosition, setEarlyExitPosition] = useState<FixedPositionRowData | null>(null);
+  const [mounted, setMounted] = useState(false);
   const connected = portfolio.isConnected;
   const liveWallet = useLiveWalletValue(address);
   const liveMonthly = useLiveMonthlyValue(address);
@@ -31,6 +34,19 @@ export default function PortfolioPage() {
   const totalYield = fixedYield + dealYield;
   const fixedRows = liveFixed.hasLiveData ? liveFixed.positions : portfolio.fixedPositions ?? [];
   const dealRows = liveDeals.hasLiveData ? liveDeals.holdings : portfolio.dealHoldings ?? [];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || status === "connecting" || status === "reconnecting") return;
+    if (!isConnected) router.replace("/vaults");
+  }, [isConnected, mounted, router, status]);
+
+  if (!mounted || status === "connecting" || status === "reconnecting" || !isConnected) {
+    return null;
+  }
 
   return (
     <div>

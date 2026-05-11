@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AllocationPieChart } from "@/components/charts";
 import { DEAL_VAULT_ABI, LONG_TERM_VAULT_ABI, LONG_TERM_VAULT_ADDRESS, USDC_ABI, USDC_ADDRESS, VAULT_ABI, VAULT_ADDRESS } from "@/app/constants";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -8,9 +9,11 @@ import { formatTokenAmount } from "@/lib/utils";
 import { useAccount, useReadContract } from "wagmi";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const dashboard = useDashboardData();
-  const { address } = useAccount();
+  const { address, isConnected, status } = useAccount();
   const [liveDeals, setLiveDeals] = useState<Array<{ id: string; contractAddress?: `0x${string}`; title: string; status: "open" | "closed" }>>([]);
+  const [mounted, setMounted] = useState(false);
   const { data: liveWalletBalance } = useReadContract({
     address: USDC_ADDRESS,
     abi: USDC_ABI,
@@ -37,6 +40,16 @@ export default function DashboardPage() {
     functionName: "totalAssets",
     query: { refetchInterval: 8000 },
   });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || status === "connecting" || status === "reconnecting") return;
+    if (!isConnected) router.replace("/vaults");
+  }, [isConnected, mounted, router, status]);
+
   useEffect(() => {
     let cancelled = false;
     async function loadDeals() {
@@ -123,6 +136,10 @@ export default function DashboardPage() {
       icon: "□",
     },
   ];
+
+  if (!mounted || status === "connecting" || status === "reconnecting" || !isConnected) {
+    return null;
+  }
 
   return (
     <div>
