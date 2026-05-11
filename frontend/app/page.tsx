@@ -199,7 +199,7 @@ function DashboardMetricCard({
     <article className={`relative overflow-hidden rounded-2xl border bg-white/[0.035] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.28)] ${palette}`}>
       <div className="relative z-10 flex items-start gap-5">
         <div className={`grid h-16 w-16 place-items-center rounded-2xl border ${palette}`}>
-          <span className="text-3xl font-semibold">{icon}</span>
+          <MetricIcon label={label} />
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -209,12 +209,37 @@ function DashboardMetricCard({
           <p className="mt-4 text-3xl font-semibold text-white">{value}</p>
         </div>
       </div>
-      <div className="absolute bottom-6 right-6 h-12 w-32 opacity-70">
-        <svg viewBox="0 0 140 48" className="h-full w-full">
-          <path d="M2 42 C18 38, 22 30, 35 33 S52 35, 65 24 84 30, 97 18 111 20, 138 5" fill="none" stroke="currentColor" strokeWidth="2" />
-        </svg>
-      </div>
     </article>
+  );
+}
+
+function MetricIcon({ label }: { label: string }) {
+  if (label === "Portfolio value") {
+    return (
+      <span className="relative h-7 w-7">
+        <span className="absolute bottom-0 left-0 h-2 w-1.5 rounded-sm bg-current" />
+        <span className="absolute bottom-0 left-2.5 h-4 w-1.5 rounded-sm bg-current" />
+        <span className="absolute bottom-0 left-5 h-6 w-1.5 rounded-sm bg-current" />
+        <span className="absolute right-0 top-0 h-3 w-3 border-r-2 border-t-2 border-current" />
+      </span>
+    );
+  }
+
+  if (label === "Available income") {
+    return (
+      <span className="relative h-7 w-7">
+        <span className="absolute inset-1 rounded-md border-2 border-current" />
+        <span className="absolute inset-2.5 rounded-sm bg-current" />
+      </span>
+    );
+  }
+
+  return (
+    <span className="relative h-7 w-7">
+      <span className="absolute inset-x-1 bottom-1 h-4 rounded-md border-2 border-current" />
+      <span className="absolute left-2 top-1 h-4 w-5 rounded-md border-2 border-current" />
+      <span className="absolute right-1.5 top-4 h-1.5 w-1.5 rounded-full bg-current" />
+    </span>
   );
 }
 
