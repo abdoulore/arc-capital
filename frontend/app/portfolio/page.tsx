@@ -14,6 +14,8 @@ import { useAccount, useReadContract } from "wagmi";
 export default function PortfolioPage() {
   const portfolio = useDashboardData();
   const { address } = useAccount();
+  const longTerm = useLongTermVault();
+  const [earlyExitPosition, setEarlyExitPosition] = useState<FixedPositionRowData | null>(null);
   const connected = portfolio.isConnected;
   const liveWallet = useLiveWalletValue(address);
   const liveMonthly = useLiveMonthlyValue(address);
@@ -48,9 +50,21 @@ export default function PortfolioPage() {
       ) : null}
 
       <section className="grid gap-3 md:grid-cols-3">
-        <PortfolioMetric label="Total value" value={connected ? formatTokenAmount(totalValue, 6, "USDC", 2) : "Awaiting Live Data"} />
-        <PortfolioMetric label="Wallet liquidity" value={connected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Awaiting Live Data"} />
-        <PortfolioMetric label="Claimable yield" value={connected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data"} />
+        <PortfolioMetric
+          label="Total value"
+          value={connected ? formatTokenAmount(totalValue, 6, "USDC", 2) : "Awaiting Live Data"}
+          detail="Cash plus live positions"
+        />
+        <PortfolioMetric
+          label="Wallet liquidity"
+          value={connected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Awaiting Live Data"}
+          detail="USDC currently in wallet"
+        />
+        <PortfolioMetric
+          label="Claimable yield"
+          value={connected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data"}
+          detail="Claimable fixed-income and deal revenue"
+        />
       </section>
 
       <section className="mt-5 grid gap-3 lg:grid-cols-3">
@@ -109,7 +123,7 @@ export default function PortfolioPage() {
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
               {connected && fixedRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No fixed-income positions.</td></tr> : null}
-              {fixedRows.map((position) => <FixedPositionRow key={position.id} position={position} />)}
+              {fixedRows.map((position) => <FixedPositionRow key={position.id} position={position} longTerm={longTerm} onEarlyExit={setEarlyExitPosition} />)}
             </tbody>
           </table>
         </div>
@@ -195,22 +209,36 @@ export default function PortfolioPage() {
           </div>
         ) : null}
       </section>
+      {earlyExitPosition ? (
+        <EarlyExitModal
+          position={earlyExitPosition}
+          busy={longTerm.transaction.status === "pending"}
+          onCancel={() => setEarlyExitPosition(null)}
+          onConfirm={async () => {
+            const ok = await longTerm.earlyExit(BigInt(earlyExitPosition.id));
+            if (ok) setEarlyExitPosition(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
 
+type FixedPositionRowData = { id: string; principal: string; claimableYield: string; maturity: string; apyBps: string; duration: string };
+
 function FixedPositionRow({
   position,
+  longTerm,
+  onEarlyExit,
 }: {
-  position: { id: string; principal: string; claimableYield: string; maturity: string; apyBps: string; duration: string };
+  position: FixedPositionRowData;
+  longTerm: ReturnType<typeof useLongTermVault>;
+  onEarlyExit: (position: FixedPositionRowData) => void;
 }) {
-  const longTerm = useLongTermVault();
   const claimableYield = toBigInt(position.claimableYield);
   const principal = toBigInt(position.principal);
   const maturitySeconds = toBigInt(position.maturity);
   const isMature = maturitySeconds > BigInt(0) && maturitySeconds <= BigInt(Math.floor(Date.now() / 1000));
-  const earlyExitReturn = (principal * BigInt(9000)) / BigInt(10000);
-  const earlyExitPenalty = principal - earlyExitReturn;
   const maturity = formatDate(BigInt(position.maturity));
   const transactionPending = longTerm.transaction.status === "pending";
 
@@ -242,12 +270,7 @@ function FixedPositionRow({
             </WalletGatedButton>
           ) : (
             <WalletGatedButton
-              onClick={() => {
-                const ok = window.confirm(
-                  `Early exit returns ${formatTokenAmount(earlyExitReturn, 6, "USDC", 2)} and sends ${formatTokenAmount(earlyExitPenalty, 6, "USDC", 2)} as penalty. Continue?`,
-                );
-                if (ok) void longTerm.earlyExit(BigInt(position.id));
-              }}
+              onClick={() => onEarlyExit(position)}
               disabled={transactionPending || principal === BigInt(0)}
               className="rounded-md border border-amber-300 px-3 py-2 font-medium text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/30"
             >
@@ -257,6 +280,67 @@ function FixedPositionRow({
         </div>
       </td>
     </tr>
+  );
+}
+
+function EarlyExitModal({
+  position,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  position: FixedPositionRowData;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const principal = toBigInt(position.principal);
+  const returnedPrincipal = (principal * BigInt(9000)) / BigInt(10000);
+  const penalty = principal - returnedPrincipal;
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[var(--panel)] p-6 shadow-2xl">
+        <p className="text-sm font-semibold uppercase text-amber-300">Fixed-income early exit</p>
+        <h2 className="mt-2 text-2xl font-semibold">Confirm early exit</h2>
+        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+          Early exit permanently closes this fixed-income position and returns principal after penalty. Unclaimed yield is not included in this exit flow.
+        </p>
+        <div className="mt-5 rounded-xl border border-[var(--line)] bg-[var(--background)] p-4 text-sm">
+          <PreviewRow label="Principal" value={formatTokenAmount(principal, 6, "USDC", 2)} />
+          <PreviewRow label="Returned to wallet" value={formatTokenAmount(returnedPrincipal, 6, "USDC", 2)} />
+          <PreviewRow label="Penalty" value={formatTokenAmount(penalty, 6, "USDC", 2)} tone="warning" />
+          <PreviewRow label="Maturity" value={formatDate(BigInt(position.maturity))} />
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="rounded-md border border-[var(--line)] px-4 py-2 text-sm font-semibold hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void onConfirm()}
+            disabled={busy}
+            className="rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {busy ? "Confirming..." : "Confirm early exit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewRow({ label, value, tone }: { label: string; value: string; tone?: "warning" }) {
+  return (
+    <div className="flex justify-between gap-4 py-2">
+      <span className="text-[var(--muted)]">{label}</span>
+      <span className={tone === "warning" ? "font-semibold text-amber-300" : "font-semibold"}>{value}</span>
+    </div>
   );
 }
 
@@ -292,10 +376,19 @@ function DealHoldingRow({
   );
 }
 
-function PortfolioMetric({ label, value }: { label: string; value: string }) {
+function PortfolioMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
-      <p className="text-xs font-medium uppercase text-[var(--muted)]">{label}</p>
+      <div className="flex items-center gap-2">
+        <p className="text-xs font-medium uppercase text-[var(--muted)]">{label}</p>
+        <span
+          title={detail}
+          aria-label={detail}
+          className="grid h-4 w-4 place-items-center rounded-full border border-[var(--line)] text-[10px] font-semibold text-[var(--muted)]"
+        >
+          i
+        </span>
+      </div>
       <p className="mt-2 text-xl font-semibold">{value}</p>
     </div>
   );
@@ -305,9 +398,15 @@ function PositionPanel({ title, status, value, detail, rows }: { title: string; 
   return (
     <article className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-2">
           <h3 className="font-semibold">{title}</h3>
-          <p className="mt-1 text-sm text-[var(--muted)]">{detail}</p>
+          <span
+            title={detail}
+            aria-label={detail}
+            className="grid h-4 w-4 place-items-center rounded-full border border-[var(--line)] text-[10px] font-semibold text-[var(--muted)]"
+          >
+            i
+          </span>
         </div>
         <StatusBadge label={status} />
       </div>
