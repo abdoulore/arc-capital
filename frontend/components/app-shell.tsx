@@ -8,7 +8,6 @@ import { useAccount } from "wagmi";
 import { ReactNode, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { TransactionToastHost } from "@/components/transaction-toast";
-import { useIsAdmin } from "@/hooks/useAdmin";
 import { ARC_TESTNET_CHAIN_ID } from "@/lib/network";
 
 const navItems = [
@@ -22,7 +21,6 @@ const navItems = [
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { address, chain } = useAccount();
-  const { isAdmin } = useIsAdmin();
   const [mounted, setMounted] = useState(false);
   const expectedChainId = ARC_TESTNET_CHAIN_ID;
   const networkLabel = !mounted || !address
@@ -56,7 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <div className="hidden h-10 w-px bg-white/10 md:block" />
           <nav className="flex flex-1 items-center gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[...navItems, ...(mounted && isAdmin ? [{ href: "/admin/overview", label: "Admin" }] : [])].map((item) => {
+            {navItems.map((item) => {
               const active = pathname === item.href;
               return (
                 <Link
