@@ -306,8 +306,6 @@ export default function VaultsPage() {
             ["Share exchange rate", hasPricePerShare ? `${formatNumber(Number(formatUnits(pps, WAD_DECIMALS)), 6)} USDC/share` : "Awaiting Live Data", "The current price for one vault share."],
             ["Shares you receive", hasPricePerShare ? formatTokenAmount(expectedShares, SHARE_DECIMALS, "shares", 4) : "Awaiting Live Data", "Your ownership units in the vault."],
             ["Vault TVL after deposit", hasTotalAssets ? formatTokenAmount(totalAssetsAfterDeposit, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data", "Estimated vault value after this deposit."],
-            ["Estimated gas", "Awaiting Wallet Estimate", "Estimated network fee."],
-            ["Total estimated cost", "Awaiting Wallet Estimate"],
           ]}
           advanced={[
             ["Settlement", "Approve USDC, then deposit"],
@@ -408,7 +406,7 @@ function getWithdrawalWindow(start?: bigint, duration?: bigint, nowMs: number | 
   const days = Math.max(1, Math.round(durationNumber / 86400));
 
   return {
-    label: open ? "Open now" : "Configured",
+    label: open ? "Open now" : "Closed now",
     detail: `${days} day window, repeats monthly`,
     countdownDate: new Date((open ? currentClose : nextStart) * 1000),
     nextWindowDate: new Date((open ? cycleStart + period : nextStart) * 1000),
