@@ -127,8 +127,8 @@ export default function VaultsPage() {
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[radial-gradient(circle_at_16%_12%,rgba(45,87,255,0.12),transparent_28%),linear-gradient(135deg,rgba(9,17,32,0.94),rgba(5,10,20,0.96))] p-5 shadow-sm">
-        <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr] lg:items-stretch">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+        <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
           <div className="flex flex-col justify-between">
             <div>
               <div className="flex flex-wrap items-start gap-3">
@@ -149,7 +149,7 @@ export default function VaultsPage() {
                 </div>
               </div>
 
-              <div className="mt-8">
+              <div className="mt-6">
                 <div className="flex items-center gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Your balance</p>
                   <span
@@ -160,16 +160,16 @@ export default function VaultsPage() {
                     i
                   </span>
                 </div>
-                <p className="mt-3 text-4xl font-semibold tracking-tight text-white">
+                <p className="mt-3 text-3xl font-semibold tracking-tight text-white">
                   {hasShares ? formatCurrency(shareValue) : "Awaiting Live Data"}
                 </p>
-                <p className="mt-2 text-base text-slate-400">
+                <p className="mt-1 text-sm text-slate-400">
                   {hasShares ? formatTokenAmount(shares, SHARE_DECIMALS, "shares", 4) : "Wallet position pending"}
                 </p>
               </div>
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               {walletConnected ? (
                 <>
                   <WalletGatedButton
@@ -193,7 +193,7 @@ export default function VaultsPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-black/10 px-5 py-3 shadow-inner">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-2 shadow-sm">
             <VaultInfoRow
               icon="[]"
               label="Withdrawal window"
@@ -212,12 +212,6 @@ export default function VaultsPage() {
               label="Yield estimate (APY)"
               value={monthlyApy.value}
               detail={monthlyApy.detail}
-            />
-            <VaultInfoRow
-              icon="~"
-              label="Vault status"
-              value="Liquid"
-              detail="Monthly liquidity window with direct wallet settlement"
               isLast
             />
           </div>
@@ -449,7 +443,7 @@ function VaultInfoRow({
   isLast?: boolean;
 }) {
   return (
-    <div className={`flex gap-4 py-4 ${isLast ? "" : "border-b border-white/10"}`}>
+    <div className={`flex gap-4 py-3.5 ${isLast ? "" : "border-b border-[var(--line)]"}`}>
       <div
         className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border text-sm font-semibold ${
           tone === "green"
