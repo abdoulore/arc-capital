@@ -127,73 +127,73 @@ export default function VaultsPage() {
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_16%_12%,rgba(45,87,255,0.18),transparent_28%),linear-gradient(135deg,rgba(9,17,32,0.96),rgba(5,10,20,0.98))] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.28)] sm:p-7">
-        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.95fr] lg:items-stretch">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[radial-gradient(circle_at_16%_12%,rgba(45,87,255,0.12),transparent_28%),linear-gradient(135deg,rgba(9,17,32,0.94),rgba(5,10,20,0.96))] p-5 shadow-sm">
+        <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr] lg:items-stretch">
           <div className="flex flex-col justify-between">
             <div>
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="grid h-16 w-16 place-items-center rounded-full border border-blue-400/20 bg-blue-500/15 text-2xl font-semibold text-blue-100 shadow-[0_0_32px_rgba(47,91,255,0.22)]">
-                  <span className="text-xl">|||</span>
+              <div className="flex flex-wrap items-start gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-xl border border-blue-400/20 bg-blue-500/15 font-semibold text-blue-100 shadow-[0_0_24px_rgba(47,91,255,0.18)]">
+                  <span className="text-sm">|||</span>
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Monthly RWA Vault</h2>
-                    <span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-300">
-                      <span className="mr-2 h-2 w-2 rounded-full bg-emerald-400" />
+                    <h2 className="text-xl font-semibold tracking-tight text-white">Monthly RWA Vault</h2>
+                    <span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold text-emerald-300">
+                      <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
                       Liquid
                     </span>
                   </div>
-                  <p className="mt-3 max-w-xl text-lg leading-8 text-slate-300">
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
                     Flexible access to real-world yield with monthly liquidity windows.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-14">
+              <div className="mt-8">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Your balance</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Your balance</p>
                   <span
                     title="Your current vault share value based on live share price."
                     aria-label="Your current vault share value based on live share price."
-                    className="grid h-5 w-5 place-items-center rounded-full border border-white/15 text-xs font-semibold text-slate-400"
+                    className="grid h-4 w-4 place-items-center rounded-full border border-white/15 text-[10px] font-semibold text-slate-400"
                   >
                     i
                   </span>
                 </div>
-                <p className="mt-5 text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+                <p className="mt-3 text-4xl font-semibold tracking-tight text-white">
                   {hasShares ? formatCurrency(shareValue) : "Awaiting Live Data"}
                 </p>
-                <p className="mt-4 text-2xl text-slate-400">
+                <p className="mt-2 text-base text-slate-400">
                   {hasShares ? formatTokenAmount(shares, SHARE_DECIMALS, "shares", 4) : "Wallet position pending"}
                 </p>
               </div>
             </div>
 
-            <div className="mt-12 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               {walletConnected ? (
                 <>
                   <WalletGatedButton
                     onClick={() => setDepositOpen(true)}
-                    className="min-h-14 flex-1 rounded-xl bg-blue-600 px-6 py-4 text-base font-semibold text-white shadow-[0_16px_40px_rgba(37,99,235,0.35)] transition hover:bg-blue-500"
+                    className="flex-1 rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(37,99,235,0.25)] transition hover:bg-blue-500"
                   >
                     Deposit
                   </WalletGatedButton>
                   <WalletGatedButton
                     onClick={() => setWithdrawOpen(true)}
-                    className="min-h-14 flex-1 rounded-xl border border-white/15 bg-white/[0.03] px-6 py-4 text-base font-semibold text-white transition hover:bg-white/[0.07]"
+                    className="flex-1 rounded-md border border-white/15 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.07]"
                   >
                     Withdraw
                   </WalletGatedButton>
                 </>
               ) : (
-                <WalletGatedButton className="min-h-14 flex-1 rounded-xl bg-blue-600 px-6 py-4 text-base font-semibold text-white shadow-[0_16px_40px_rgba(37,99,235,0.35)] transition hover:bg-blue-500">
+                <WalletGatedButton className="flex-1 rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(37,99,235,0.25)] transition hover:bg-blue-500">
                   Connect Wallet
                 </WalletGatedButton>
               )}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-5 shadow-inner sm:p-7">
+          <div className="rounded-lg border border-white/10 bg-black/10 px-5 py-3 shadow-inner">
             <VaultInfoRow
               icon="[]"
               label="Withdrawal window"
@@ -449,9 +449,9 @@ function VaultInfoRow({
   isLast?: boolean;
 }) {
   return (
-    <div className={`flex gap-5 py-6 ${isLast ? "" : "border-b border-white/10"}`}>
+    <div className={`flex gap-4 py-4 ${isLast ? "" : "border-b border-white/10"}`}>
       <div
-        className={`grid h-14 w-14 shrink-0 place-items-center rounded-full border text-lg font-semibold ${
+        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border text-sm font-semibold ${
           tone === "green"
             ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
             : "border-blue-400/20 bg-blue-500/10 text-blue-300"
@@ -460,9 +460,9 @@ function VaultInfoRow({
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-        <p className={`mt-2 text-2xl font-semibold ${tone === "green" ? "text-emerald-300" : "text-white"}`}>{value}</p>
-        <p className="mt-2 text-sm leading-6 text-slate-400">{detail}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+        <p className={`mt-1 text-lg font-semibold ${tone === "green" ? "text-emerald-300" : "text-white"}`}>{value}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-400">{detail}</p>
       </div>
     </div>
   );
