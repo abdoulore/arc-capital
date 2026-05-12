@@ -1,12 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { formatUnits, parseUnits } from "viem";
-import { CountdownTimer } from "@/components/countdown-timer";
-import { MetricCard } from "@/components/metric-card";
 import { Modal } from "@/components/modal";
 import { SectionHeader } from "@/components/section-header";
-import { StatusBadge } from "@/components/status-badge";
 import { WalletGatedButton } from "@/components/wallet-gated-button";
 import { bigintToNumber, formatCurrency, formatNumber, formatPercent, formatTokenAmount } from "@/lib/utils";
 import { useLongTermVault, useMonthlyVault } from "@/hooks/useInvestmentContracts";
@@ -87,12 +84,6 @@ export default function VaultsPage() {
   const ownershipAfterWithdraw =
     totalSharesAfterWithdraw > BigInt(0) ? (bigintToNumber(remainingShares, SHARE_DECIMALS) / bigintToNumber(totalSharesAfterWithdraw, SHARE_DECIMALS)) * 100 : 0;
 
-  const transactionText = useMemo(() => {
-    const active = vault.transaction.status !== "idle" ? vault.transaction : longTerm.transaction;
-    if (active.status === "idle") return null;
-    return `${active.label}${active.error ? `: ${active.error}` : ""}`;
-  }, [vault.transaction, longTerm.transaction]);
-
   const liveOptions = LONG_TERM_OPTIONS.map((option, index) => {
     const tranche = longTerm.tranches[index];
     return {
@@ -127,12 +118,6 @@ export default function VaultsPage() {
         description="Choose between semi-liquid NAV exposure and deterministic fixed-income lockups. Every action previews liquidity, penalties, and settlement."
       />
 
-      {transactionText ? (
-        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
-          {transactionText}
-        </div>
-      ) : null}
-
       {!walletConnected ? (
         <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
           <p className="font-semibold">Connect Wallet</p>
@@ -142,49 +127,100 @@ export default function VaultsPage() {
         </div>
       ) : null}
 
-      <section className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold">Monthly RWA Vault</h2>
-              <StatusBadge label="Liquid" />
+      <section className="overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_16%_12%,rgba(45,87,255,0.18),transparent_28%),linear-gradient(135deg,rgba(9,17,32,0.96),rgba(5,10,20,0.98))] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.28)] sm:p-7">
+        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.95fr] lg:items-stretch">
+          <div className="flex flex-col justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="grid h-16 w-16 place-items-center rounded-full border border-blue-400/20 bg-blue-500/15 text-2xl font-semibold text-blue-100 shadow-[0_0_32px_rgba(47,91,255,0.22)]">
+                  <span className="text-xl">|||</span>
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Monthly RWA Vault</h2>
+                    <span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-300">
+                      <span className="mr-2 h-2 w-2 rounded-full bg-emerald-400" />
+                      Liquid
+                    </span>
+                  </div>
+                  <p className="mt-3 max-w-xl text-lg leading-8 text-slate-300">
+                    Flexible access to real-world yield with monthly liquidity windows.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-14">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Your balance</p>
+                  <span
+                    title="Your current vault share value based on live share price."
+                    aria-label="Your current vault share value based on live share price."
+                    className="grid h-5 w-5 place-items-center rounded-full border border-white/15 text-xs font-semibold text-slate-400"
+                  >
+                    i
+                  </span>
+                </div>
+                <p className="mt-5 text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+                  {hasShares ? formatCurrency(shareValue) : "Awaiting Live Data"}
+                </p>
+                <p className="mt-4 text-2xl text-slate-400">
+                  {hasShares ? formatTokenAmount(shares, SHARE_DECIMALS, "shares", 4) : "Wallet position pending"}
+                </p>
+              </div>
             </div>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-              Semi-liquid exposure to short-duration real-world strategies. Withdrawals are free during monthly windows; outside-window exits pay a penalty that remains for other shareholders.
-            </p>
+
+            <div className="mt-12 flex flex-col gap-3 sm:flex-row">
+              {walletConnected ? (
+                <>
+                  <WalletGatedButton
+                    onClick={() => setDepositOpen(true)}
+                    className="min-h-14 flex-1 rounded-xl bg-blue-600 px-6 py-4 text-base font-semibold text-white shadow-[0_16px_40px_rgba(37,99,235,0.35)] transition hover:bg-blue-500"
+                  >
+                    Deposit
+                  </WalletGatedButton>
+                  <WalletGatedButton
+                    onClick={() => setWithdrawOpen(true)}
+                    className="min-h-14 flex-1 rounded-xl border border-white/15 bg-white/[0.03] px-6 py-4 text-base font-semibold text-white transition hover:bg-white/[0.07]"
+                  >
+                    Withdraw
+                  </WalletGatedButton>
+                </>
+              ) : (
+                <WalletGatedButton className="min-h-14 flex-1 rounded-xl bg-blue-600 px-6 py-4 text-base font-semibold text-white shadow-[0_16px_40px_rgba(37,99,235,0.35)] transition hover:bg-blue-500">
+                  Connect Wallet
+                </WalletGatedButton>
+              )}
+            </div>
           </div>
-          {withdrawalWindow.countdownDate ? (
-            <CountdownTimer date={withdrawalWindow.countdownDate.toISOString()} />
-          ) : (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-              Withdrawal window not configured
-            </div>
-          )}
-        </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <MetricCard label="Yearly APY" value={monthlyApy.value} detail={monthlyApy.detail} />
-          <MetricCard label="Total value locked" value={hasTotalAssets ? formatTokenAmount(totalAssets, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data"} detail="Live onchain vault assets" />
-          <MetricCard label="Your claimable value" value={hasShares ? formatCurrency(shareValue) : "Awaiting Live Data"} detail={hasShares ? formatTokenAmount(shares, SHARE_DECIMALS, "shares", 4) : "Wallet position pending"} />
-          <MetricCard label="Withdrawal window" value={withdrawalWindow.label} detail={withdrawalWindow.detail} />
-        </div>
-        <div className="mt-6 flex flex-wrap gap-3">
-          {walletConnected ? (
-            <>
-              <WalletGatedButton onClick={() => setDepositOpen(true)} className="rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
-                Deposit
-              </WalletGatedButton>
-              <WalletGatedButton onClick={() => setWithdrawOpen(true)} className="rounded-md border border-[var(--line)] px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-900">
-                Withdraw
-              </WalletGatedButton>
-            </>
-          ) : (
-            <WalletGatedButton className="rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
-              Connect Wallet
-            </WalletGatedButton>
-          )}
-          <button onClick={vault.fundWallet} className="rounded-md border border-[var(--line)] px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-900">
-            Get test USDC
-          </button>
+
+          <div className="rounded-2xl border border-white/10 bg-black/10 p-5 shadow-inner sm:p-7">
+            <VaultInfoRow
+              icon="[]"
+              label="Withdrawal window"
+              value={withdrawalWindow.label}
+              detail={withdrawalWindow.countdownDate ? getWindowTimingText(withdrawalWindow) : withdrawalWindow.detail}
+              tone={withdrawalWindow.isOpen ? "green" : "blue"}
+            />
+            <VaultInfoRow
+              icon="|||"
+              label="Total value locked"
+              value={hasTotalAssets ? formatTokenAmount(totalAssets, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data"}
+              detail="Live onchain vault assets"
+            />
+            <VaultInfoRow
+              icon="%"
+              label="Yield estimate (APY)"
+              value={monthlyApy.value}
+              detail={monthlyApy.detail}
+            />
+            <VaultInfoRow
+              icon="~"
+              label="Vault status"
+              value="Liquid"
+              detail="Monthly liquidity window with direct wallet settlement"
+              isLast
+            />
+          </div>
         </div>
       </section>
 
@@ -388,6 +424,48 @@ function getWithdrawalWindow(start?: bigint, duration?: bigint, nowMs: number | 
     countdownDate: new Date((open ? currentClose : nextStart) * 1000),
     isOpen: open,
   };
+}
+
+function getWindowTimingText(window: { countdownDate: Date | null; isOpen: boolean; detail: string }) {
+  if (!window.countdownDate) return window.detail;
+  const diffMs = Math.max(0, window.countdownDate.getTime() - Date.now());
+  const days = Math.max(1, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
+  return window.isOpen ? `Window closes in ${days} day${days === 1 ? "" : "s"}` : `Next window in ${days} day${days === 1 ? "" : "s"}`;
+}
+
+function VaultInfoRow({
+  icon,
+  label,
+  value,
+  detail,
+  tone = "blue",
+  isLast,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  detail: string;
+  tone?: "blue" | "green";
+  isLast?: boolean;
+}) {
+  return (
+    <div className={`flex gap-5 py-6 ${isLast ? "" : "border-b border-white/10"}`}>
+      <div
+        className={`grid h-14 w-14 shrink-0 place-items-center rounded-full border text-lg font-semibold ${
+          tone === "green"
+            ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
+            : "border-blue-400/20 bg-blue-500/10 text-blue-300"
+        }`}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+        <p className={`mt-2 text-2xl font-semibold ${tone === "green" ? "text-emerald-300" : "text-white"}`}>{value}</p>
+        <p className="mt-2 text-sm leading-6 text-slate-400">{detail}</p>
+      </div>
+    </div>
+  );
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {

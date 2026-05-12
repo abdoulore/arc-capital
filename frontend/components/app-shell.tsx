@@ -83,9 +83,36 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className={cn("mr-2 inline-block h-1.5 w-1.5 rounded-full", networkOk ? "bg-emerald-400" : "bg-slate-500")} />
               {networkLabel}
             </div>
-            <div className="[&_.iekbcc0]:!rounded-xl [&_button]:!min-h-0 [&_button]:!rounded-xl [&_button]:!px-4 [&_button]:!py-2 [&_button]:!text-sm [&_button]:!font-semibold">
-              <ConnectButton />
-            </div>
+            <ConnectButton.Custom>
+              {({ account, mounted: walletMounted, openAccountModal, openConnectModal }) => {
+                const ready = mounted && walletMounted;
+                const connected = ready && account;
+
+                if (!connected) {
+                  return (
+                    <button
+                      type="button"
+                      onClick={openConnectModal}
+                      className="rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold text-slate-100 ring-1 ring-white/10 transition hover:bg-white/10"
+                    >
+                      Connect Wallet
+                    </button>
+                  );
+                }
+
+                return (
+                  <button
+                    type="button"
+                    onClick={openAccountModal}
+                    className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold text-slate-100 ring-1 ring-white/10 transition hover:bg-white/10"
+                  >
+                    <span>{account.displayBalance}</span>
+                    <span className="h-1 w-1 rounded-full bg-slate-500" />
+                    <span>{account.displayName}</span>
+                  </button>
+                );
+              }}
+            </ConnectButton.Custom>
           </div>
         </div>
       </header>
