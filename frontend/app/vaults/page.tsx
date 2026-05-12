@@ -76,6 +76,7 @@ export default function VaultsPage() {
   const totalSharesAfterWithdraw = totalShares > requestedShares ? totalShares - requestedShares : BigInt(0);
   const withdrawalWindow = getWithdrawalWindow(vault.withdrawalWindowStart, vault.withdrawalWindowDuration, todayMs);
   const monthlyApy = getMonthlyVaultApy(monthlyApySummary);
+  void monthlyApy;
   const penaltyBps = typeof vault.penaltyBps === "bigint" ? Number(vault.penaltyBps) : 0;
   const previewPenalty = withdrawalWindow.isOpen ? 0 : grossWithdraw * (penaltyBps / 10_000);
   const netWithdraw = Math.max(0, grossWithdraw - previewPenalty);
@@ -114,22 +115,12 @@ export default function VaultsPage() {
     <div>
       <SectionHeader
         eyebrow="Vaults"
-        title="Liquidity-aware investing"
-        description="Choose between semi-liquid NAV exposure and deterministic fixed-income lockups. Every action previews liquidity, penalties, and settlement."
+        title="Choose between flexible yield access and long-term fixed returns"
+        description=""
       />
 
-      {!walletConnected ? (
-        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
-          <p className="font-semibold">Connect Wallet</p>
-          <p className="mt-1 text-blue-800 dark:text-blue-200">
-            Connect your wallet to deposit, withdraw, or configure a fixed-income lock.
-          </p>
-        </div>
-      ) : null}
-
-      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-        <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
-          <div className="flex flex-col justify-between">
+      <section className="grid gap-4 lg:grid-cols-[1.35fr_0.75fr]">
+          <div className="flex min-h-[280px] flex-col justify-between rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
             <div>
               <div className="flex flex-wrap items-start gap-3">
                 <div className="grid h-11 w-11 place-items-center rounded-xl border border-blue-400/20 bg-blue-500/15 font-semibold text-blue-100 shadow-[0_0_24px_rgba(47,91,255,0.18)]">
@@ -149,23 +140,35 @@ export default function VaultsPage() {
                 </div>
               </div>
 
-              <div className="mt-6">
-                <div className="flex items-center gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Your balance</p>
-                  <span
-                    title="Your current vault share value based on live share price."
-                    aria-label="Your current vault share value based on live share price."
-                    className="grid h-4 w-4 place-items-center rounded-full border border-white/15 text-[10px] font-semibold text-slate-400"
-                  >
-                    i
-                  </span>
-                </div>
-                <p className="mt-3 text-3xl font-semibold tracking-tight text-white">
-                  {hasShares ? formatCurrency(shareValue) : "Awaiting Live Data"}
-                </p>
-                <p className="mt-1 text-sm text-slate-400">
-                  {hasShares ? formatTokenAmount(shares, SHARE_DECIMALS, "shares", 4) : "Wallet position pending"}
-                </p>
+              <div className="mt-6 border-t border-[var(--line)] pt-6">
+                {walletConnected ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Your balance</p>
+                      <span
+                        title="Your current vault share value based on live share price."
+                        aria-label="Your current vault share value based on live share price."
+                        className="grid h-4 w-4 place-items-center rounded-full border border-white/15 text-[10px] font-semibold text-slate-400"
+                      >
+                        i
+                      </span>
+                    </div>
+                    <p className="mt-3 text-4xl font-semibold tracking-tight text-white">
+                      {hasShares ? formatCurrency(shareValue) : "Awaiting Live Data"}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-400">
+                      {hasShares ? formatTokenAmount(shares, SHARE_DECIMALS, "shares", 4) : "Wallet position pending"}
+                    </p>
+                  </>
+                ) : (
+                  <div className="mx-auto flex max-w-xl flex-col items-center py-4 text-center">
+                    <div className="grid h-16 w-16 place-items-center rounded-full border border-blue-400/20 bg-blue-500/10 text-2xl font-semibold text-blue-300">
+                      +
+                    </div>
+                    <p className="mt-5 text-2xl font-semibold leading-9 text-white">Connect your wallet to access deposits, withdrawals, and vault positions.</p>
+                    <p className="mt-3 text-sm text-slate-400">Your funds remain non-custodial and secure.</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -186,14 +189,14 @@ export default function VaultsPage() {
                   </WalletGatedButton>
                 </>
               ) : (
-                <WalletGatedButton className="flex-1 rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(37,99,235,0.25)] transition hover:bg-blue-500">
+                <WalletGatedButton className="mx-auto w-full max-w-md rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(37,99,235,0.25)] transition hover:bg-blue-500">
                   Connect Wallet
                 </WalletGatedButton>
               )}
             </div>
           </div>
 
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-2 shadow-sm">
+          <div className="min-h-[280px] rounded-lg border border-[var(--line)] bg-[var(--panel)] px-5 py-4 shadow-sm">
             <VaultInfoRow
               icon="[]"
               label="Withdrawal window"
@@ -203,19 +206,12 @@ export default function VaultsPage() {
             />
             <VaultInfoRow
               icon="|||"
-              label="Total value locked"
+              label="Vault liquidity"
               value={hasTotalAssets ? formatTokenAmount(totalAssets, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data"}
               detail="Live onchain vault assets"
-            />
-            <VaultInfoRow
-              icon="%"
-              label="Yield estimate (APY)"
-              value={monthlyApy.value}
-              detail={monthlyApy.detail}
               isLast
             />
           </div>
-        </div>
       </section>
 
       <section className="mt-6">
@@ -270,9 +266,7 @@ export default function VaultsPage() {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
-                Principal is locked until maturity. Early exits may return less than principal after penalties.
-              </div>
+              <p className="mt-5 text-sm text-[var(--muted)]">Early withdrawals may reduce returns</p>
             </div>
 
             <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 text-[var(--foreground)] shadow-sm">
@@ -392,13 +386,14 @@ function safeBigInt(value: string) {
 
 function getWithdrawalWindow(start?: bigint, duration?: bigint, nowMs: number | null = Date.now()) {
   if (typeof start !== "bigint" || typeof duration !== "bigint") {
-    return { label: "Awaiting Live Data", detail: "Reading vault schedule", countdownDate: null as Date | null, isOpen: false };
+    return { label: "Awaiting Live Data", detail: "Reading vault schedule", countdownDate: null as Date | null, nextWindowDate: null as Date | null, isOpen: false };
   }
   if (start === BigInt(0) || duration === BigInt(0)) {
-    return { label: "Not configured", detail: "Admin must set a monthly withdrawal window", countdownDate: null as Date | null, isOpen: false };
+    return { label: "Not configured", detail: "Admin must set a monthly withdrawal window", countdownDate: null as Date | null, nextWindowDate: null as Date | null, isOpen: false };
   }
   if (!nowMs) {
-    return { label: "Configured", detail: "Monthly free-withdrawal schedule", countdownDate: new Date(Number(start) * 1000), isOpen: false };
+    const startDate = new Date(Number(start) * 1000);
+    return { label: "Configured", detail: "Monthly free-withdrawal schedule", countdownDate: startDate, nextWindowDate: startDate, isOpen: false };
   }
 
   const now = Math.floor(nowMs / 1000);
@@ -416,6 +411,7 @@ function getWithdrawalWindow(start?: bigint, duration?: bigint, nowMs: number | 
     label: open ? "Open now" : "Configured",
     detail: `${days} day window, repeats monthly`,
     countdownDate: new Date((open ? currentClose : nextStart) * 1000),
+    nextWindowDate: new Date((open ? cycleStart + period : nextStart) * 1000),
     isOpen: open,
   };
 }
