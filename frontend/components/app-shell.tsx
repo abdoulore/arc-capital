@@ -47,9 +47,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#060b16]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <Link href={mounted && isConnected ? "/" : "/vaults"} className="flex min-w-max items-center gap-3 pr-5 text-base font-semibold tracking-normal md:border-r md:border-white/10">
-            <span className="relative grid h-8 w-8 place-items-center rounded-xl border border-indigo-400/25 bg-indigo-500/10 text-indigo-300 shadow-[0_0_24px_rgba(124,92,255,0.24)]">
-              <span className="absolute h-4 w-4 rotate-45 border-l-2 border-t-2 border-indigo-300" />
-              <span className="absolute h-2.5 w-2.5 rotate-45 border-l-2 border-t-2 border-blue-400 translate-x-1 translate-y-1" />
+            <span className="relative grid h-8 w-8 overflow-hidden rounded-xl border border-indigo-400/25 bg-[#050a17] shadow-[0_0_24px_rgba(37,99,235,0.28)]">
+              <img
+                src="/arc-capital-logo.png"
+                alt=""
+                className="h-full w-full scale-[2.55] object-cover"
+                aria-hidden="true"
+              />
             </span>
             <span>Arc Capital</span>
           </Link>
