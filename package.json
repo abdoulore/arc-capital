@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "deploy:arc": "hardhat run scripts/deploy.js --network arcTestnet",
+    "deploy:arc:v2": "hardhat run scripts/deploy-v2.js --network arcTestnet",
+    "test:v2": "hardhat test test/monthly-vault-v2.test.js test/long-term-vault-v2.test.js test/deal-vault-v2.test.js test/marketplace-v2.test.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

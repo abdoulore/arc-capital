@@ -165,6 +165,24 @@ Development / backfill worker:
 
 The worker scans configured Arc contracts in chunks and posts decoded events to `V2_INDEXER_INGEST_URL`. Use it for local development, testnet backfills, and recovery. Production should prefer Circle event monitors where available.
 
+## Deployment
+
+Deploy V2 contracts to Arc Testnet with:
+
+```bash
+npm run deploy:arc:v2
+```
+
+Optional environment variables:
+
+- `USDC_ADDRESS`
+- `ADMIN_WALLET`
+- `OPERATOR_WALLET`
+- `TREASURY_WALLET`
+- `PRIVATE_KEY`
+
+The deploy script prints frontend/Vercel env vars and writes a local ignored registry under `deployments/`.
+
 Frontend-owned logic:
 
 - wallet connection
