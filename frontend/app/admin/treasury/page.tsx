@@ -2,118 +2,187 @@
 
 import { useEffect, useState } from "react";
 import type { Address } from "viem";
-import { useReadContract } from "wagmi";
-import { LONG_TERM_VAULT_ADDRESS, USDC_ABI, USDC_ADDRESS } from "@/app/constants";
-import { AdminButton, AdminHeader, AdminInput, AdminMetric, AdminPanel, formatUsdc } from "@/components/admin/admin-ui";
+import { useAccount, useReadContract } from "wagmi";
+import {
+  LONG_TERM_VAULT_V2_ADDRESS,
+  MONTHLY_VAULT_V2_ADDRESS,
+  USDC_ABI,
+  USDC_ADDRESS,
+} from "@/app/constants";
+import { AdminButton, AdminHeader, AdminInput, AdminMetric, AdminPanel } from "@/components/admin/admin-ui";
 import { useAdminContracts } from "@/hooks/useAdminContracts";
-import type { DealMetadata } from "@/lib/admin-store";
 import { formatAddress, formatDate, formatTokenAmount } from "@/lib/utils";
 
-type TreasurySummary = {
-  treasury?: string;
-  treasuryBalance: string;
-  monthlyVaultBalance: string;
-  longTermBalance: string;
-  totalRoutedYield: string;
-  totalDealRevenue: string;
-  history: Array<{ id: string; timestamp: string; source?: string; destination?: string; amount: string; type: string; hash: string }>;
+type V2Deal = {
+  id: string;
+  contractAddress?: Address | null;
+  title: string;
+  status: string;
+};
+
+type V2Treasury = {
+  status: "live" | "pending";
+  summary: null | {
+    total_routed_yield_usdc: string;
+    total_deal_revenue_usdc: string;
+    movement_count: string;
+  };
+  movements: Array<{
+    id: string;
+    movement_type: string;
+    operator_wallet: string | null;
+    destination: string | null;
+    amount_usdc: string;
+    tx_hash: string | null;
+    occurred_at: string;
+  }>;
+};
+
+const EMPTY_TREASURY: V2Treasury = {
+  status: "pending",
+  summary: null,
+  movements: [],
 };
 
 export default function AdminTreasuryPage() {
+  const { address } = useAccount();
   const admin = useAdminContracts();
   const [monthlyYield, setMonthlyYield] = useState("");
   const [longTermYield, setLongTermYield] = useState("");
   const [dealRevenue, setDealRevenue] = useState("");
   const [selectedDeal, setSelectedDeal] = useState("");
-  const [deals, setDeals] = useState<DealMetadata[]>([]);
-  const [summary, setSummary] = useState<TreasurySummary | null>(null);
-  const treasuryAddress = (summary?.treasury ?? (typeof admin.metrics.treasury === "string" ? admin.metrics.treasury : undefined)) as Address | undefined;
-  const treasuryBalance = useReadContract({
+  const [deals, setDeals] = useState<V2Deal[]>([]);
+  const [treasury, setTreasury] = useState<V2Treasury>(EMPTY_TREASURY);
+  const [error, setError] = useState<string | null>(null);
+
+  const operatorBalance = useReadContract({
     address: USDC_ADDRESS,
     abi: USDC_ABI,
     functionName: "balanceOf",
-    args: treasuryAddress ? [treasuryAddress] : undefined,
-    query: { enabled: Boolean(treasuryAddress), refetchInterval: 10000 },
+    args: address ? [address] : undefined,
+    query: { enabled: Boolean(address), refetchInterval: 10000 },
+  });
+  const monthlyVaultBalance = useReadContract({
+    address: USDC_ADDRESS,
+    abi: USDC_ABI,
+    functionName: "balanceOf",
+    args: [MONTHLY_VAULT_V2_ADDRESS],
+    query: { refetchInterval: 10000 },
   });
   const longTermBalance = useReadContract({
     address: USDC_ADDRESS,
     abi: USDC_ABI,
     functionName: "balanceOf",
-    args: [LONG_TERM_VAULT_ADDRESS],
+    args: [LONG_TERM_VAULT_V2_ADDRESS],
     query: { refetchInterval: 10000 },
   });
 
-  function refresh() {
-    fetch("/api/admin/deals")
-      .then((res) => res.json())
-      .then(setDeals)
-      .catch(() => setDeals([]));
-    fetch("/api/admin/treasury")
-      .then((res) => res.json())
-      .then(setSummary)
-      .catch(() => setSummary(null));
+  async function refresh() {
+    try {
+      const [dealsResponse, treasuryResponse] = await Promise.all([
+        fetch("/api/v2/deals", { cache: "no-store" }),
+        fetch("/api/v2/admin/treasury", { cache: "no-store" }),
+      ]);
+      if (!dealsResponse.ok || !treasuryResponse.ok) throw new Error("Treasury data unavailable.");
+      const dealsPayload = (await dealsResponse.json()) as { openDeals?: V2Deal[]; closedDeals?: V2Deal[] };
+      const treasuryPayload = (await treasuryResponse.json()) as V2Treasury;
+      setDeals([...(dealsPayload.openDeals ?? []), ...(dealsPayload.closedDeals ?? [])].filter((deal) => deal.contractAddress));
+      setTreasury(treasuryPayload);
+      setError(null);
+    } catch {
+      setDeals([]);
+      setTreasury(EMPTY_TREASURY);
+      setError("Treasury data unavailable.");
+    }
   }
 
   useEffect(() => {
     refresh();
     const interval = window.setInterval(refresh, 12000);
-    return () => window.clearInterval(interval);
+    window.addEventListener("arc:data-refresh", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("arc:data-refresh", refresh);
+    };
   }, []);
-
-  const liveDeals = deals.filter((deal) => deal.contractAddress && !("contractMissing" in deal));
-  const treasuryUsdc =
-    typeof treasuryBalance.data === "bigint"
-      ? treasuryBalance.data
-      : summary
-        ? toBigInt(summary.treasuryBalance)
-        : undefined;
-  const fixedReserves =
-    typeof longTermBalance.data === "bigint"
-      ? longTermBalance.data
-      : summary
-        ? toBigInt(summary.longTermBalance)
-        : undefined;
 
   return (
     <div>
-      <AdminHeader title="Treasury and distributions" description="Route real wallet-funded yield into vaults and deal contracts. No synthetic yield is created here." />
+      <AdminHeader
+        title="Treasury and distributions"
+        description="Route real wallet-funded yield into V2 vaults and deal contracts. No synthetic yield is created here."
+      />
+
+      {error ? (
+        <div className="mb-5 rounded-lg border border-amber-400/25 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-100">
+          {error}
+        </div>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-4">
-        <AdminMetric label="Treasury wallet" value={treasuryAddress ? formatAddress(treasuryAddress) : "Awaiting Live Data"} detail="Settlement source" />
-        <AdminMetric label="Treasury USDC" value={treasuryUsdc !== undefined ? formatTokenAmount(treasuryUsdc, 6, "", 2).trim() : "Loading"} detail="USDC" />
-        <AdminMetric label="Monthly vault cash" value={summary ? formatTokenAmount(toBigInt(summary.monthlyVaultBalance), 6, "", 2).trim() : formatUsdc(admin.metrics.monthlyTVL)} detail="USDC" />
-        <AdminMetric label="Long-term reserves" value={fixedReserves !== undefined ? formatTokenAmount(fixedReserves, 6, "", 2).trim() : "Loading"} detail="USDC" />
+        <AdminMetric label="Operator wallet" value={address ? formatAddress(address) : "Connect Wallet"} detail="Settlement source" />
+        <AdminMetric label="Operator USDC" value={formatMaybeUSDC(operatorBalance.data)} detail="Available for routing" />
+        <AdminMetric label="Monthly vault cash" value={formatMaybeUSDC(monthlyVaultBalance.data)} detail="V2 vault USDC balance" />
+        <AdminMetric label="Long-term reserves" value={formatMaybeUSDC(longTermBalance.data)} detail="V2 fixed-income reserve" />
       </div>
+
       <div className="mt-4 grid gap-4 md:grid-cols-3">
-        <AdminMetric label="Total routed yield" value={summary ? formatTokenAmount(toBigInt(summary.totalRoutedYield), 6, "USDC", 2) : "Awaiting Live Data"} />
-        <AdminMetric label="Total deal revenue" value={summary ? formatTokenAmount(toBigInt(summary.totalDealRevenue), 6, "USDC", 2) : "Awaiting Live Data"} />
-        <AdminMetric label="Distribution mode" value="Wallet tx" detail="Requires operator confirmation" />
+        <AdminMetric label="Total routed yield" value={formatTokenAmount(decimalUsdcToRaw(treasury.summary?.total_routed_yield_usdc), 6, "USDC", 2)} />
+        <AdminMetric label="Total deal revenue" value={formatTokenAmount(decimalUsdcToRaw(treasury.summary?.total_deal_revenue_usdc), 6, "USDC", 2)} />
+        <AdminMetric label="Distribution records" value={treasury.summary?.movement_count ?? "0"} detail="Indexed treasury movements" />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <AdminPanel title="Inject Monthly Vault yield">
           <div className="grid gap-3">
             <AdminInput value={monthlyYield} onChange={setMonthlyYield} placeholder="Amount USDC" />
-            <AdminButton onClick={async () => { const ok = await admin.injectMonthlyYield(monthlyYield); if (ok) { setMonthlyYield(""); refresh(); } }}>Route yield</AdminButton>
+            <AdminButton
+              onClick={async () => {
+                const ok = await admin.injectMonthlyYield(monthlyYield);
+                if (ok) {
+                  setMonthlyYield("");
+                  refresh();
+                }
+              }}
+            >
+              Route yield
+            </AdminButton>
           </div>
         </AdminPanel>
+
         <AdminPanel title="Fund fixed-income yield reserve">
           <div className="grid gap-3">
-            <p className="text-sm text-[var(--muted)]">Funds deterministic monthly claims and maturity yield. This is a real USDC transfer to the Long-Term Vault.</p>
+            <p className="text-sm text-[var(--muted)]">
+              Transfers USDC directly into the V2 Long-Term Vault reserve used for deterministic yield claims and maturity payouts.
+            </p>
             <AdminInput value={longTermYield} onChange={setLongTermYield} placeholder="Amount USDC" />
-            <AdminButton onClick={async () => { const ok = await admin.injectLongTermYield(longTermYield); if (ok) { setLongTermYield(""); refresh(); } }}>Fund reserve</AdminButton>
+            <AdminButton
+              onClick={async () => {
+                const ok = await admin.injectLongTermYield(longTermYield);
+                if (ok) {
+                  setLongTermYield("");
+                  refresh();
+                }
+              }}
+            >
+              Fund reserve
+            </AdminButton>
           </div>
         </AdminPanel>
+
         <AdminPanel title="Distribute deal revenue">
           <div className="grid gap-3">
-            <p className="text-sm text-[var(--muted)]">Transfers USDC from the operator wallet into the selected Deal Vault and updates pro-rata claimable revenue.</p>
+            <p className="text-sm text-[var(--muted)]">
+              Transfers USDC from the operator wallet into the selected V2 Deal Vault and updates pro-rata claimable revenue.
+            </p>
             <select
               value={selectedDeal}
               onChange={(event) => setSelectedDeal(event.target.value)}
               className="rounded-md border border-[var(--line)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select deal</option>
-              {liveDeals.map((deal) => (
-                <option key={deal.id} value={deal.contractAddress}>
+              {deals.map((deal) => (
+                <option key={deal.id} value={deal.contractAddress ?? ""}>
                   {deal.title}
                 </option>
               ))}
@@ -137,16 +206,18 @@ export default function AdminTreasuryPage() {
 
       <AdminPanel title="Distribution history">
         <div className="divide-y divide-[var(--line)]">
-          {!summary || summary.history.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
-          {summary?.history.map((item) => (
+          {treasury.movements.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
+          {treasury.movements.map((item) => (
             <div key={item.id} className="flex flex-col gap-1 py-3 text-sm md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="font-medium">{humanizeType(item.type)}</p>
-                <p className="text-[var(--muted)]">{formatTokenAmount(toBigInt(item.amount), 6, "USDC", 2)} routed to {item.destination ? formatAddress(item.destination) : "destination"}</p>
+                <p className="font-medium">{humanizeType(item.movement_type)}</p>
+                <p className="text-[var(--muted)]">
+                  {formatTokenAmount(decimalUsdcToRaw(item.amount_usdc), 6, "USDC", 2)} routed to {item.destination ? formatAddress(item.destination) : "destination"}
+                </p>
               </div>
               <div className="text-[var(--muted)] md:text-right">
-                <p>{formatDate(item.timestamp)}</p>
-                <p className="font-mono text-xs">{formatAddress(item.hash, 10, 6)}</p>
+                <p>{formatDate(item.occurred_at)}</p>
+                {item.tx_hash ? <p className="font-mono text-xs">{formatAddress(item.tx_hash, 10, 6)}</p> : null}
               </div>
             </div>
           ))}
@@ -156,9 +227,17 @@ export default function AdminTreasuryPage() {
   );
 }
 
-function toBigInt(value?: string) {
+function formatMaybeUSDC(value: unknown) {
+  return typeof value === "bigint" ? formatTokenAmount(value, 6, "USDC", 2) : "Awaiting Live Data";
+}
+
+function decimalUsdcToRaw(value?: string | null) {
+  if (!value) return BigInt(0);
+  const [wholeRaw, fractionRaw = ""] = value.split(".");
+  const whole = wholeRaw.replace(/[^\d-]/g, "") || "0";
+  const fraction = fractionRaw.replace(/\D/g, "").padEnd(6, "0").slice(0, 6);
   try {
-    return BigInt(value ?? "0");
+    return BigInt(whole) * BigInt(1_000_000) + BigInt(fraction || "0");
   } catch {
     return BigInt(0);
   }
@@ -166,7 +245,8 @@ function toBigInt(value?: string) {
 
 function humanizeType(type: string) {
   return type
-    .split("-")
+    .replace(/_/g, " ")
+    .split(" ")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }

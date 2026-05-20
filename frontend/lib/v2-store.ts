@@ -899,6 +899,25 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
     );
   }
 
+  if (eventName === "monthlyyieldinjected") {
+    const operator = stringValue(payload.operator ?? event.actorWallet)?.toLowerCase();
+    await pool.query(
+      `insert into v2_treasury_movements (
+         id, movement_type, operator_wallet, destination, amount_usdc, tx_hash, occurred_at
+       )
+       select $1, 'monthly_yield', $2, $3, $4, $5, $6
+       where not exists (select 1 from v2_treasury_movements where tx_hash = $5)`,
+      [
+        crypto.randomUUID(),
+        operator ?? null,
+        event.contractAddress.toLowerCase(),
+        usdcValue(payload.amountUsdc, payload.amount),
+        event.txHash,
+        timestamp,
+      ],
+    );
+  }
+
   if (eventName === "marketplacelistingcreated") {
     const listingId = stringValue(payload.listingId) ?? "0";
     const seller = stringValue(payload.seller)?.toLowerCase();
@@ -935,6 +954,25 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
         ],
       );
     }
+  }
+
+  if (eventName === "dealrevenuedistributed") {
+    const operator = stringValue(payload.operator ?? event.actorWallet)?.toLowerCase();
+    await pool.query(
+      `insert into v2_treasury_movements (
+         id, movement_type, operator_wallet, destination, amount_usdc, tx_hash, occurred_at
+       )
+       select $1, 'deal_revenue', $2, $3, $4, $5, $6
+       where not exists (select 1 from v2_treasury_movements where tx_hash = $5)`,
+      [
+        crypto.randomUUID(),
+        operator ?? null,
+        event.contractAddress.toLowerCase(),
+        usdcValue(payload.amountUsdc, payload.amount),
+        event.txHash,
+        timestamp,
+      ],
+    );
   }
 
   if (eventName === "marketplacelistingfilled") {

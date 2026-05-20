@@ -12,8 +12,12 @@ import {
   DEAL_VAULT_V2_ABI,
   LONG_TERM_VAULT_ABI,
   LONG_TERM_VAULT_ADDRESS,
+  LONG_TERM_VAULT_V2_ABI,
+  LONG_TERM_VAULT_V2_ADDRESS,
   MARKETPLACE_ABI,
   MARKETPLACE_ADDRESS,
+  MONTHLY_VAULT_V2_ABI,
+  MONTHLY_VAULT_V2_ADDRESS,
   SAMPLE_DEAL_ADDRESS,
   USDC_ABI,
   USDC_ADDRESS,
@@ -125,18 +129,16 @@ export function useAdminContracts() {
       ]),
     injectMonthlyYield: async (amount: string) => {
       const parsedAmount = parseUnits(amount || "0", 6);
-      const steps = await buildApprovalSteps(YIELD_ROUTER_ADDRESS, parsedAmount);
+      const steps = await buildApprovalSteps(MONTHLY_VAULT_V2_ADDRESS, parsedAmount);
       return run("Inject Monthly Vault yield", [
         ...steps,
-        () => writeEstimatedAdminContract({ writeContractAsync, request: { address: YIELD_ROUTER_ADDRESS, abi: YIELD_ROUTER_ABI, functionName: "routeYield", args: [VAULT_ADDRESS, parsedAmount, "monthly-vault-yield"] } }),
+        () => writeEstimatedAdminContract({ writeContractAsync, request: { address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "injectYield", args: [parsedAmount] } }),
       ]);
     },
     injectLongTermYield: async (amount: string) => {
       const parsedAmount = parseUnits(amount || "0", 6);
-      const steps = await buildApprovalSteps(YIELD_ROUTER_ADDRESS, parsedAmount);
       return run("Fund fixed-income yield reserve", [
-        ...steps,
-        () => writeEstimatedAdminContract({ writeContractAsync, request: { address: YIELD_ROUTER_ADDRESS, abi: YIELD_ROUTER_ABI, functionName: "routeYield", args: [LONG_TERM_VAULT_ADDRESS, parsedAmount, "fixed-income-yield-reserve"] } }),
+        () => writeEstimatedAdminContract({ writeContractAsync, request: { address: USDC_ADDRESS, abi: USDC_ABI, functionName: "transfer", args: [LONG_TERM_VAULT_V2_ADDRESS, parsedAmount] } }),
       ]);
     },
     createDeal: async (input: { title: string; targetRaise: string; minRaise: string; deadline: string; metadataId?: string }) => {
