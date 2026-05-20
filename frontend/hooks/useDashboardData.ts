@@ -80,7 +80,7 @@ export function useDashboardData() {
 
       setLoading(true);
       try {
-        const response = await fetch(`/api/dashboard?address=${address}`, { cache: "no-store" });
+        const response = await fetch(`/api/v2/dashboard?wallet=${address}`, { cache: "no-store" });
         const payload = (await response.json()) as DashboardResponse;
         if (!cancelled) setData(payload);
       } catch {
