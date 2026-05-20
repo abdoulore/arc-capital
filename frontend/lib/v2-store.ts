@@ -1,0 +1,649 @@
+import { Pool, type QueryResultRow } from "pg";
+import { ARC_TESTNET_CHAIN_ID } from "./arc";
+
+const POSTGRES_URL =
+  process.env.POSTGRES_URL ??
+  process.env.DATABASE_URL ??
+  process.env.POSTGRES_PRISMA_URL ??
+  process.env.POSTGRES_URL_NON_POOLING;
+
+export type V2DataStatus = "live" | "pending";
+
+export type V2WalletQuery = {
+  wallet?: string | null;
+};
+
+export type V2ActivityRow = {
+  id: string;
+  action: string;
+  valueUsdc?: string;
+  shares?: string;
+  txHash?: string;
+  timestamp?: string;
+  source: "indexed" | "pending";
+};
+
+export async function getV2BackendStatus() {
+  const pool = await getV2Pool();
+  return {
+    database: pool ? "connected" : "pending",
+    source: pool ? "PostgreSQL indexed data" : "Pending Integration",
+  };
+}
+
+export async function getV2Dashboard(wallet?: string | null) {
+  const pool = await getV2Pool();
+  if (!pool || !wallet) return emptyDashboard(pool ? "live" : "pending");
+  const normalized = normalizeWallet(wallet);
+  const [snapshot, activity] = await Promise.all([
+    one<{
+      total_value_usdc: string;
+      wallet_cash_usdc: string;
+      monthly_vault_usdc: string;
+      fixed_income_usdc: string;
+      deal_holdings_usdc: string;
+      claimable_yield_usdc: string;
+      snapshot_at: Date;
+    }>(
+      pool,
+      `select total_value_usdc, wallet_cash_usdc, monthly_vault_usdc, fixed_income_usdc,
+              deal_holdings_usdc, claimable_yield_usdc, snapshot_at
+       from v2_portfolio_snapshots
+       where wallet = $1
+       order by snapshot_at desc
+       limit 1`,
+      [normalized],
+    ),
+    getV2Activity({ wallet: normalized, limit: 5 }),
+  ]);
+
+  if (!snapshot) return emptyDashboard("live");
+
+  return {
+    status: "live" as V2DataStatus,
+    totalPortfolioValue: snapshot.total_value_usdc,
+    availableIncome: snapshot.claimable_yield_usdc,
+    walletCash: snapshot.wallet_cash_usdc,
+    allocation: [
+      { label: "Wallet USDC", valueUsdc: snapshot.wallet_cash_usdc },
+      { label: "Monthly Vault", valueUsdc: snapshot.monthly_vault_usdc },
+      { label: "Fixed Income", valueUsdc: snapshot.fixed_income_usdc },
+      { label: "Deal Holdings", valueUsdc: snapshot.deal_holdings_usdc },
+    ].filter((item) => Number(item.valueUsdc) > 0),
+    lastUpdated: snapshot.snapshot_at.toISOString(),
+    activity,
+  };
+}
+
+export async function getV2Portfolio(wallet?: string | null) {
+  const pool = await getV2Pool();
+  if (!pool || !wallet) return emptyPortfolio(pool ? "live" : "pending");
+  const normalized = normalizeWallet(wallet);
+  const [monthly, fixedPositions, dealHoldings, activity] = await Promise.all([
+    one<{ shares: string; current_value_usdc: string; claimable_yield_usdc: string; updated_at: Date }>(
+      pool,
+      `select shares, current_value_usdc, claimable_yield_usdc, updated_at
+       from v2_monthly_vault_positions
+       where wallet = $1`,
+      [normalized],
+    ),
+    many<{
+      id: string;
+      principal_usdc: string;
+      apy_bps: number;
+      maturity_at: Date;
+      claimable_yield_usdc: string;
+      redeemed_at: Date | null;
+    }>(
+      pool,
+      `select id, principal_usdc, apy_bps, maturity_at, claimable_yield_usdc, redeemed_at
+       from v2_fixed_income_positions
+       where wallet = $1
+       order by maturity_at asc`,
+      [normalized],
+    ),
+    many<{
+      deal_id: string;
+      title: string;
+      shares: string;
+      value_usdc: string;
+      claimable_yield_usdc: string;
+    }>(
+      pool,
+      `select d.id as deal_id, d.title, sum(i.shares)::text as shares,
+              sum(i.amount_usdc)::text as value_usdc, '0'::text as claimable_yield_usdc
+       from v2_deal_investments i
+       join v2_deals d on d.id = i.deal_id
+       where i.investor_wallet = $1
+       group by d.id, d.title
+       order by d.title asc`,
+      [normalized],
+    ),
+    getV2Activity({ wallet: normalized, limit: 25 }),
+  ]);
+
+  return {
+    status: "live" as V2DataStatus,
+    monthlyVault: monthly
+      ? {
+          shares: monthly.shares,
+          currentValueUsdc: monthly.current_value_usdc,
+          claimableYieldUsdc: monthly.claimable_yield_usdc,
+          updatedAt: monthly.updated_at.toISOString(),
+        }
+      : null,
+    fixedIncomePositions: fixedPositions.map((position) => ({
+      id: position.id,
+      principalUsdc: position.principal_usdc,
+      apyBps: position.apy_bps,
+      maturityAt: position.maturity_at.toISOString(),
+      claimableYieldUsdc: position.claimable_yield_usdc,
+      status: position.redeemed_at ? "redeemed" : "active",
+    })),
+    dealHoldings: dealHoldings.map((holding) => ({
+      dealId: holding.deal_id,
+      title: holding.title,
+      shares: holding.shares,
+      currentValueUsdc: holding.value_usdc,
+      claimableYieldUsdc: holding.claimable_yield_usdc,
+    })),
+    activity,
+  };
+}
+
+export async function getV2MonthlyVault() {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, summary: null, activity: [] };
+  const [summary, activity] = await Promise.all([
+    one<{
+      investor_capital_usdc: string;
+      routed_yield_usdc: string;
+      nav_usdc: string;
+      liquidity_usdc: string;
+      withdrawal_window_status: string;
+      updated_at: Date;
+    }>(
+      pool,
+      `select
+         coalesce(sum(current_value_usdc), 0)::text as investor_capital_usdc,
+         '0'::text as routed_yield_usdc,
+         coalesce(sum(current_value_usdc), 0)::text as nav_usdc,
+         coalesce(sum(current_value_usdc), 0)::text as liquidity_usdc,
+         'pending'::text as withdrawal_window_status,
+         now() as updated_at
+       from v2_monthly_vault_positions`,
+    ),
+    getV2Activity({ limit: 10, source: "monthly" }),
+  ]);
+  return { status: "live" as V2DataStatus, summary, activity };
+}
+
+export async function getV2FixedIncome(wallet?: string | null) {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, positions: [], obligations: null };
+  const params = wallet ? [normalizeWallet(wallet)] : [];
+  const where = wallet ? "where wallet = $1" : "";
+  const [positions, obligations] = await Promise.all([
+    many<{
+      id: string;
+      wallet: string;
+      principal_usdc: string;
+      apy_bps: number;
+      maturity_at: Date;
+      claimable_yield_usdc: string;
+      redeemed_at: Date | null;
+    }>(
+      pool,
+      `select id, wallet, principal_usdc, apy_bps, maturity_at, claimable_yield_usdc, redeemed_at
+       from v2_fixed_income_positions
+       ${where}
+       order by maturity_at asc
+       limit 100`,
+      params,
+    ),
+    one<{ principal_usdc: string; claimable_yield_usdc: string; active_positions: string }>(
+      pool,
+      `select coalesce(sum(principal_usdc), 0)::text as principal_usdc,
+              coalesce(sum(claimable_yield_usdc), 0)::text as claimable_yield_usdc,
+              count(*)::text as active_positions
+       from v2_fixed_income_positions
+       where redeemed_at is null`,
+    ),
+  ]);
+  return { status: "live" as V2DataStatus, positions, obligations };
+}
+
+export async function getV2Deals() {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, openDeals: [], closedDeals: [] };
+  const rows = await many<{
+    id: string;
+    deal_vault_address: string | null;
+    title: string;
+    subtitle: string | null;
+    risk_level: string | null;
+    status: string;
+    target_raise_usdc: string | null;
+    total_raised_usdc: string;
+    investor_count: number;
+    funding_deadline: Date | null;
+    closed_at: Date | null;
+  }>(
+    pool,
+    `select id, deal_vault_address, title, subtitle, risk_level, status,
+            target_raise_usdc, total_raised_usdc, investor_count, funding_deadline, closed_at
+     from v2_deals
+     order by created_at desc`,
+  );
+  const deals = rows.map((deal) => ({
+    id: deal.id,
+    contractAddress: deal.deal_vault_address,
+    title: deal.title,
+    subtitle: deal.subtitle,
+    riskLevel: deal.risk_level,
+    status: deriveDealStatus(deal.status, deal.funding_deadline),
+    targetRaiseUsdc: deal.target_raise_usdc,
+    totalRaisedUsdc: deal.total_raised_usdc,
+    investorCount: deal.investor_count,
+    fundingDeadline: deal.funding_deadline?.toISOString(),
+    closedAt: deal.closed_at?.toISOString(),
+  }));
+  return {
+    status: "live" as V2DataStatus,
+    openDeals: deals.filter((deal) => deal.status === "open"),
+    closedDeals: deals.filter((deal) => deal.status !== "open"),
+  };
+}
+
+export async function getV2Marketplace(wallet?: string | null) {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, listings: [], userOrders: [], trades: [] };
+  const normalized = wallet ? normalizeWallet(wallet) : undefined;
+  const [listings, userOrders, trades] = await Promise.all([
+    manyMarketplaceListings(pool, "where l.status = 'active' and l.shares_remaining > 0", []),
+    normalized ? manyMarketplaceListings(pool, "where l.seller_wallet = $1 and l.status = 'active'", [normalized]) : Promise.resolve([]),
+    many<{
+      id: string;
+      buyer_wallet: string;
+      seller_wallet: string;
+      shares: string;
+      total_price_usdc: string;
+      tx_hash: string;
+      traded_at: Date;
+    }>(
+      pool,
+      `select id, buyer_wallet, seller_wallet, shares, total_price_usdc, tx_hash, traded_at
+       from v2_marketplace_trades
+       order by traded_at desc
+       limit 50`,
+    ),
+  ]);
+  return { status: "live" as V2DataStatus, listings, userOrders, trades };
+}
+
+export async function getV2AdminOverview() {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, metrics: null, activity: [] };
+  const [metrics, activity] = await Promise.all([
+    one<{
+      total_value_usdc: string;
+      investor_count: string;
+      active_deals: string;
+      open_listings: string;
+      marketplace_volume_usdc: string;
+    }>(
+      pool,
+      `select
+        coalesce((select sum(total_value_usdc) from (
+          select distinct on (wallet) wallet, total_value_usdc
+          from v2_portfolio_snapshots
+          order by wallet, snapshot_at desc
+        ) latest), 0)::text as total_value_usdc,
+        (select count(*)::text from v2_users) as investor_count,
+        (select count(*)::text from v2_deals where status = 'open' and (funding_deadline is null or funding_deadline > now())) as active_deals,
+        (select count(*)::text from v2_marketplace_listings where status = 'active' and shares_remaining > 0) as open_listings,
+        coalesce((select sum(total_price_usdc) from v2_marketplace_trades), 0)::text as marketplace_volume_usdc`,
+    ),
+    getV2AdminActivity(10),
+  ]);
+  return { status: "live" as V2DataStatus, metrics, activity };
+}
+
+export async function getV2Treasury() {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, summary: null, movements: [] };
+  const [summary, movements] = await Promise.all([
+    one<{
+      total_routed_yield_usdc: string;
+      total_deal_revenue_usdc: string;
+      movement_count: string;
+    }>(
+      pool,
+      `select coalesce(sum(case when movement_type = 'monthly_yield' then amount_usdc else 0 end), 0)::text as total_routed_yield_usdc,
+              coalesce(sum(case when movement_type = 'deal_revenue' then amount_usdc else 0 end), 0)::text as total_deal_revenue_usdc,
+              count(*)::text as movement_count
+       from v2_treasury_movements`,
+    ),
+    many<{
+      id: string;
+      movement_type: string;
+      operator_wallet: string | null;
+      destination: string | null;
+      amount_usdc: string;
+      tx_hash: string | null;
+      occurred_at: Date;
+    }>(
+      pool,
+      `select id, movement_type, operator_wallet, destination, amount_usdc, tx_hash, occurred_at
+       from v2_treasury_movements
+       order by occurred_at desc
+       limit 50`,
+    ),
+  ]);
+  return { status: "live" as V2DataStatus, summary, movements };
+}
+
+export async function getV2AdminActivity(limit = 50) {
+  const pool = await getV2Pool();
+  if (!pool) return [];
+  const rows = await many<{
+    id: string;
+    operator_wallet: string | null;
+    action: string;
+    summary: string;
+    tx_hash: string | null;
+    created_at: Date;
+  }>(
+    pool,
+    `select id, operator_wallet, action, summary, tx_hash, created_at
+     from v2_admin_activity
+     order by created_at desc
+     limit $1`,
+    [limit],
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    operatorWallet: row.operator_wallet,
+    action: row.action,
+    summary: row.summary,
+    txHash: row.tx_hash,
+    timestamp: row.created_at.toISOString(),
+  }));
+}
+
+export async function getV2Activity(options: { wallet?: string; limit?: number; source?: "monthly" } = {}) {
+  const pool = await getV2Pool();
+  if (!pool) return [];
+  const limit = options.limit ?? 25;
+  const monthlyWhere = options.wallet ? "where wallet = $1" : "";
+  const params = options.wallet ? [normalizeWallet(options.wallet), limit] : [limit];
+  const limitParam = options.wallet ? "$2" : "$1";
+  const rows = await many<{
+    id: string;
+    activity_type: string;
+    amount_usdc: string;
+    shares: string;
+    tx_hash: string;
+    occurred_at: Date;
+  }>(
+    pool,
+    `select id, activity_type, amount_usdc, shares, tx_hash, occurred_at
+     from v2_monthly_vault_activity
+     ${monthlyWhere}
+     order by occurred_at desc
+     limit ${limitParam}`,
+    params,
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    action: row.activity_type,
+    valueUsdc: row.amount_usdc,
+    shares: row.shares,
+    txHash: row.tx_hash,
+    timestamp: row.occurred_at.toISOString(),
+    source: "indexed" as const,
+  }));
+}
+
+async function manyMarketplaceListings(pool: Pool, where: string, params: unknown[]) {
+  return many<{
+    id: string;
+    onchain_listing_id: string;
+    title: string | null;
+    seller_wallet: string;
+    shares_remaining: string;
+    price_per_share_usdc: string;
+    status: string;
+    created_at: Date;
+  }>(
+    pool,
+    `select l.id, l.onchain_listing_id, d.title, l.seller_wallet, l.shares_remaining,
+            l.price_per_share_usdc, l.status, l.created_at
+     from v2_marketplace_listings l
+     left join v2_deals d on d.id = l.deal_id
+     ${where}
+     order by l.created_at desc
+     limit 100`,
+    params,
+  );
+}
+
+async function getV2Pool() {
+  if (!POSTGRES_URL) return null;
+
+  const globalWithPg = globalThis as typeof globalThis & {
+    __arcV2PgPool?: Pool;
+    __arcV2PgReady?: Promise<void>;
+  };
+
+  if (!globalWithPg.__arcV2PgPool) {
+    globalWithPg.__arcV2PgPool = new Pool({
+      connectionString: POSTGRES_URL,
+      ssl: needsSsl(POSTGRES_URL) ? { rejectUnauthorized: false } : undefined,
+      max: 5,
+    });
+  }
+
+  if (!globalWithPg.__arcV2PgReady) {
+    globalWithPg.__arcV2PgReady = ensureV2Schema(globalWithPg.__arcV2PgPool);
+  }
+
+  await globalWithPg.__arcV2PgReady;
+  return globalWithPg.__arcV2PgPool;
+}
+
+async function ensureV2Schema(pool: Pool) {
+  await pool.query(`
+    create table if not exists v2_users (
+      wallet text primary key,
+      first_seen_at timestamptz not null default now(),
+      last_seen_at timestamptz not null default now(),
+      kyc_status text not null default 'unverified',
+      metadata jsonb not null default '{}'
+    );
+
+    create table if not exists v2_deals (
+      id uuid primary key,
+      chain_id integer not null default ${ARC_TESTNET_CHAIN_ID},
+      deal_vault_address text unique,
+      title text not null,
+      subtitle text,
+      description text,
+      category text,
+      risk_level text,
+      status text not null default 'open',
+      target_raise_usdc numeric(38, 6),
+      min_investment_usdc numeric(38, 6),
+      total_raised_usdc numeric(38, 6) not null default 0,
+      ownership_issued numeric(38, 6) not null default 0,
+      investor_count integer not null default 0,
+      funding_deadline timestamptz,
+      closed_at timestamptz,
+      revenue_distribution_model text,
+      expected_payout_schedule text,
+      cover_image_url text,
+      metadata jsonb not null default '{}',
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    );
+
+    create table if not exists v2_monthly_vault_positions (
+      wallet text primary key,
+      shares numeric(38, 6) not null default 0,
+      current_value_usdc numeric(38, 6) not null default 0,
+      claimable_yield_usdc numeric(38, 6) not null default 0,
+      updated_at timestamptz not null default now()
+    );
+
+    create table if not exists v2_monthly_vault_activity (
+      id uuid primary key,
+      wallet text not null,
+      activity_type text not null,
+      amount_usdc numeric(38, 6) not null default 0,
+      shares numeric(38, 6) not null default 0,
+      tx_hash text not null unique,
+      occurred_at timestamptz not null
+    );
+
+    create table if not exists v2_fixed_income_positions (
+      id uuid primary key,
+      wallet text not null,
+      onchain_position_id text,
+      principal_usdc numeric(38, 6) not null,
+      apy_bps integer not null,
+      duration_seconds integer not null,
+      start_at timestamptz not null,
+      maturity_at timestamptz not null,
+      claimable_yield_usdc numeric(38, 6) not null default 0,
+      redeemed_at timestamptz,
+      created_tx_hash text,
+      updated_at timestamptz not null default now()
+    );
+
+    create table if not exists v2_deal_investments (
+      id uuid primary key,
+      deal_id uuid references v2_deals(id),
+      investor_wallet text not null,
+      amount_usdc numeric(38, 6) not null,
+      shares numeric(38, 6) not null,
+      tx_hash text not null unique,
+      invested_at timestamptz not null
+    );
+
+    create table if not exists v2_marketplace_listings (
+      id uuid primary key,
+      chain_id integer not null default ${ARC_TESTNET_CHAIN_ID},
+      onchain_listing_id text not null,
+      deal_id uuid references v2_deals(id),
+      seller_wallet text not null,
+      shares_total numeric(38, 6) not null,
+      shares_remaining numeric(38, 6) not null,
+      price_per_share_usdc numeric(38, 6) not null,
+      status text not null default 'active',
+      created_tx_hash text,
+      created_at timestamptz not null,
+      cancelled_at timestamptz,
+      unique (chain_id, onchain_listing_id)
+    );
+
+    create table if not exists v2_marketplace_trades (
+      id uuid primary key,
+      listing_id uuid references v2_marketplace_listings(id),
+      buyer_wallet text not null,
+      seller_wallet text not null,
+      shares numeric(38, 6) not null,
+      total_price_usdc numeric(38, 6) not null,
+      tx_hash text not null unique,
+      traded_at timestamptz not null
+    );
+
+    create table if not exists v2_treasury_movements (
+      id uuid primary key,
+      movement_type text not null,
+      operator_wallet text,
+      destination text,
+      amount_usdc numeric(38, 6) not null,
+      tx_hash text,
+      metadata jsonb not null default '{}',
+      occurred_at timestamptz not null default now()
+    );
+
+    create table if not exists v2_admin_activity (
+      id uuid primary key,
+      operator_wallet text,
+      action text not null,
+      summary text not null,
+      tx_hash text,
+      metadata jsonb not null default '{}',
+      created_at timestamptz not null default now()
+    );
+
+    create table if not exists v2_portfolio_snapshots (
+      id uuid primary key,
+      wallet text not null,
+      total_value_usdc numeric(38, 6) not null default 0,
+      wallet_cash_usdc numeric(38, 6) not null default 0,
+      monthly_vault_usdc numeric(38, 6) not null default 0,
+      fixed_income_usdc numeric(38, 6) not null default 0,
+      deal_holdings_usdc numeric(38, 6) not null default 0,
+      claimable_yield_usdc numeric(38, 6) not null default 0,
+      snapshot_at timestamptz not null default now()
+    );
+
+    create index if not exists v2_portfolio_snapshots_wallet_idx on v2_portfolio_snapshots (wallet, snapshot_at desc);
+    create index if not exists v2_deals_status_idx on v2_deals (status, funding_deadline);
+    create index if not exists v2_monthly_vault_activity_wallet_idx on v2_monthly_vault_activity (wallet, occurred_at desc);
+    create index if not exists v2_marketplace_listings_status_idx on v2_marketplace_listings (status, created_at desc);
+  `);
+}
+
+async function one<T extends QueryResultRow>(pool: Pool, text: string, values: unknown[] = []) {
+  const result = await pool.query<T>(text, values);
+  return result.rows[0] ?? null;
+}
+
+async function many<T extends QueryResultRow>(pool: Pool, text: string, values: unknown[] = []) {
+  const result = await pool.query<T>(text, values);
+  return result.rows;
+}
+
+function emptyDashboard(status: V2DataStatus) {
+  return {
+    status,
+    totalPortfolioValue: "0",
+    availableIncome: "0",
+    walletCash: "0",
+    allocation: [],
+    lastUpdated: null,
+    activity: [],
+  };
+}
+
+function emptyPortfolio(status: V2DataStatus) {
+  return {
+    status,
+    monthlyVault: null,
+    fixedIncomePositions: [],
+    dealHoldings: [],
+    activity: [],
+  };
+}
+
+function deriveDealStatus(status: string, deadline?: Date | null) {
+  if (status !== "open") return status;
+  if (deadline && deadline.getTime() <= Date.now()) return "closed";
+  return "open";
+}
+
+function normalizeWallet(wallet: string) {
+  return wallet.trim().toLowerCase();
+}
+
+function needsSsl(connectionString: string) {
+  try {
+    const host = new URL(connectionString).hostname;
+    return !new Set(["localhost", "127.0.0.1"]).has(host);
+  } catch {
+    return true;
+  }
+}
