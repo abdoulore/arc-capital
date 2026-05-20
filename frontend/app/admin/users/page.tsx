@@ -24,7 +24,7 @@ export default function AdminUsersPage() {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 8000);
 
-    fetch("/api/admin/users", { signal: controller.signal, cache: "no-store" })
+    fetch("/api/v2/admin/users", { signal: controller.signal, cache: "no-store" })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("User analytics unavailable"))))
       .then((payload) => {
         setSummary(payload);
@@ -62,7 +62,7 @@ export default function AdminUsersPage() {
               <tr><th className="py-3">Wallet</th><th>Portfolio value</th><th>Total deposits</th><th>Active investments</th><th>Yield claimed</th><th>Marketplace volume</th><th>Status</th></tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
-              {loadError ? <tr><td className="py-6 text-[var(--muted)]" colSpan={7}>User analytics unavailable. Retry after the RPC recovers.</td></tr> : null}
+              {loadError ? <tr><td className="py-6 text-[var(--muted)]" colSpan={7}>User analytics unavailable.</td></tr> : null}
               {!loadError && (!summary || summary.wallets.length === 0) ? <tr><td className="py-6 text-[var(--muted)]" colSpan={7}>{loading ? "Loading investor wallets." : "No investor wallets found."}</td></tr> : null}
               {summary?.wallets.map((wallet) => (
                 <tr key={wallet.wallet}>
@@ -81,13 +81,13 @@ export default function AdminUsersPage() {
       </AdminPanel>
       <AdminPanel title="Marketplace activity">
         <div className="divide-y divide-[var(--line)]">
-          {loadError ? <p className="py-6 text-sm text-[var(--muted)]">Marketplace user activity unavailable. Retry after the RPC recovers.</p> : null}
+          {loadError ? <p className="py-6 text-sm text-[var(--muted)]">Marketplace user activity unavailable.</p> : null}
           {!loadError && (!summary || summary.marketplaceActivity.length === 0) ? <p className="py-6 text-sm text-[var(--muted)]">{loading && !summary ? "Loading marketplace activity." : "No marketplace fills recorded."}</p> : null}
           {summary?.marketplaceActivity.map((item) => (
             <div key={item.id} className="flex flex-col gap-1 py-3 text-sm md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="font-medium">Listing #{item.listingId} filled</p>
-                <p className="text-[var(--muted)]">{formatNumber(Number(item.amount), 0)} shares for {formatTokenAmount(toBigInt(item.totalPrice), 6, "USDC", 2)}</p>
+                <p className="font-medium">Marketplace fill</p>
+                <p className="text-[var(--muted)]">{formatNumber(Number(item.amount), 0)} shares for {formatTokenAmount(decimalUsdcToRaw(item.totalPrice), 6, "USDC", 2)}</p>
               </div>
               <div className="text-[var(--muted)] md:text-right">
                 <p>{formatAddress(item.buyer)}</p>
@@ -104,6 +104,18 @@ export default function AdminUsersPage() {
 function toBigInt(value?: string) {
   try {
     return BigInt(value ?? "0");
+  } catch {
+    return BigInt(0);
+  }
+}
+
+function decimalUsdcToRaw(value?: string) {
+  if (!value) return BigInt(0);
+  const [wholeRaw, fractionRaw = ""] = value.split(".");
+  const whole = wholeRaw.replace(/[^\d-]/g, "") || "0";
+  const fraction = fractionRaw.replace(/\D/g, "").padEnd(6, "0").slice(0, 6);
+  try {
+    return BigInt(whole) * BigInt(1_000_000) + BigInt(fraction || "0");
   } catch {
     return BigInt(0);
   }

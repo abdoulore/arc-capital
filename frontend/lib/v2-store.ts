@@ -501,6 +501,135 @@ export async function getV2Treasury() {
   return { status: "live" as V2DataStatus, summary, movements };
 }
 
+export async function getV2AdminUsers() {
+  const pool = await getV2Pool();
+  if (!pool) {
+    return {
+      status: "pending" as V2DataStatus,
+      activeInvestors: 0,
+      topInvestorDeposits: "0",
+      recentUsers: 0,
+      highRiskActivity: "0",
+      wallets: [],
+      marketplaceActivity: [],
+    };
+  }
+
+  const [wallets, marketplaceActivity] = await Promise.all([
+    many<{
+      wallet: string;
+      portfolio_value: string;
+      total_deposits: string;
+      active_investments: string;
+      yield_claimed: string;
+      marketplace_volume: string;
+      status: string;
+      first_seen_at: Date;
+      last_seen_at: Date;
+    }>(
+      pool,
+      `with latest_snapshots as (
+         select distinct on (wallet) wallet, total_value_usdc
+         from v2_portfolio_snapshots
+         order by wallet, snapshot_at desc
+       ),
+       monthly_deposits as (
+         select wallet, coalesce(sum(amount_usdc), 0) as amount
+         from v2_monthly_vault_activity
+         where activity_type ilike '%deposit%'
+         group by wallet
+       ),
+       deal_deposits as (
+         select investor_wallet as wallet, coalesce(sum(amount_usdc), 0) as amount, count(*) as investments
+         from v2_deal_investments
+         group by investor_wallet
+       ),
+       fixed_positions as (
+         select wallet, coalesce(sum(principal_usdc), 0) as amount, count(*) filter (where redeemed_at is null) as active_positions
+         from v2_fixed_income_positions
+         group by wallet
+       ),
+       yielded as (
+         select actor_wallet as wallet, coalesce(sum((payload->>'amountUsdc')::numeric), 0) as amount
+         from v2_contract_events
+         where actor_wallet is not null and event_name in ('FixedIncomeYieldClaimed', 'DealYieldClaimed')
+         group by actor_wallet
+       ),
+       trade_volume as (
+         select buyer_wallet as wallet, coalesce(sum(total_price_usdc), 0) as amount
+         from v2_marketplace_trades
+         group by buyer_wallet
+       )
+       select
+         u.wallet,
+         coalesce(s.total_value_usdc, 0)::text as portfolio_value,
+         (coalesce(md.amount, 0) + coalesce(dd.amount, 0) + coalesce(fp.amount, 0))::text as total_deposits,
+         (coalesce(dd.investments, 0) + coalesce(fp.active_positions, 0))::text as active_investments,
+         coalesce(y.amount, 0)::text as yield_claimed,
+         coalesce(tv.amount, 0)::text as marketplace_volume,
+         case
+           when coalesce(dd.investments, 0) + coalesce(fp.active_positions, 0) > 0 then 'Invested'
+           when coalesce(s.total_value_usdc, 0) > 0 then 'Holding value'
+           else 'Active'
+         end as status,
+         u.first_seen_at,
+         u.last_seen_at
+       from v2_users u
+       left join latest_snapshots s on s.wallet = u.wallet
+       left join monthly_deposits md on md.wallet = u.wallet
+       left join deal_deposits dd on dd.wallet = u.wallet
+       left join fixed_positions fp on fp.wallet = u.wallet
+       left join yielded y on y.wallet = u.wallet
+       left join trade_volume tv on tv.wallet = u.wallet
+       order by (coalesce(s.total_value_usdc, 0) + coalesce(md.amount, 0) + coalesce(dd.amount, 0) + coalesce(fp.amount, 0)) desc
+       limit 100`,
+    ),
+    many<{
+      id: string;
+      buyer_wallet: string;
+      shares: string;
+      total_price_usdc: string;
+      tx_hash: string;
+      traded_at: Date;
+    }>(
+      pool,
+      `select id, buyer_wallet, shares, total_price_usdc, tx_hash, traded_at
+       from v2_marketplace_trades
+       order by traded_at desc
+       limit 10`,
+    ),
+  ]);
+
+  const topInvestorDeposits = wallets[0]?.total_deposits ?? "0";
+  const recentUsers = wallets.filter((wallet) => Date.now() - wallet.last_seen_at.getTime() <= 7 * 24 * 60 * 60 * 1000).length;
+
+  return {
+    status: "live" as V2DataStatus,
+    activeInvestors: wallets.filter((wallet) => Number(wallet.total_deposits) > 0 || Number(wallet.portfolio_value) > 0 || Number(wallet.active_investments) > 0).length,
+    topInvestorDeposits,
+    recentUsers,
+    highRiskActivity: "0",
+    wallets: wallets.map((wallet) => ({
+      wallet: wallet.wallet,
+      portfolioValue: wallet.portfolio_value,
+      totalDeposits: wallet.total_deposits,
+      activeInvestments: Number(wallet.active_investments),
+      yieldClaimed: wallet.yield_claimed,
+      marketplaceVolume: wallet.marketplace_volume,
+      status: wallet.status,
+    })),
+    marketplaceActivity: marketplaceActivity.map((item) => ({
+      id: item.id,
+      buyer: item.buyer_wallet,
+      amount: item.shares,
+      totalPrice: item.total_price_usdc,
+      listingId: "",
+      timestamp: item.traded_at.toISOString(),
+      hash: item.tx_hash,
+    })),
+  };
+}
+
 export async function getV2AdminActivity(limit = 50) {
   const pool = await getV2Pool();
   if (!pool) return [];
