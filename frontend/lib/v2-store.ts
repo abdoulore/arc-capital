@@ -737,6 +737,35 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
     );
   }
 
+  if (eventName === "dealcreated") {
+    const dealId = stringValue(payload.dealId) ?? "0";
+    const dealVault = stringValue(payload.dealVault);
+    const metadataId = stringValue(payload.metadataId);
+    await pool.query(
+      `insert into v2_deals (
+         id, chain_id, deal_vault_address, title, subtitle, status,
+         target_raise_usdc, min_investment_usdc, funding_deadline, metadata
+       )
+       values ($1, $2, $3, $4, $5, 'open', $6, $7, to_timestamp($8), $9)
+       on conflict (deal_vault_address) do update set
+         target_raise_usdc = excluded.target_raise_usdc,
+         min_investment_usdc = excluded.min_investment_usdc,
+         funding_deadline = excluded.funding_deadline,
+         updated_at = now()`,
+      [
+        crypto.randomUUID(),
+        event.chainId ?? ARC_TESTNET_CHAIN_ID,
+        dealVault?.toLowerCase() ?? null,
+        metadataId ? `Deal ${metadataId}` : `Deal #${dealId}`,
+        metadataId ?? "Awaiting admin metadata",
+        decimalString(payload.amountUsdc ?? payload.targetRaise),
+        decimalString(payload.minRaise),
+        Number(payload.closeTime ?? 0),
+        { onchainDealId: dealId, metadataId },
+      ],
+    );
+  }
+
   if (eventName === "fixedincomepositionopened" && wallet) {
     await pool.query(
       `insert into v2_fixed_income_positions (

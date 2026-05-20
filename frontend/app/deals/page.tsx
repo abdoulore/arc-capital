@@ -16,10 +16,10 @@ export default function DealsPage() {
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [tab, setTab] = useState<"open" | "closed">("open");
-  const [adminDeals, setAdminDeals] = useState<DealMetadata[]>([]);
+  const [deals, setDeals] = useState<DealMetadata[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const { address } = useAccount();
-  const liveDeals = useMemo(() => toDealViews(adminDeals), [adminDeals]);
+  const liveDeals = useMemo(() => toDealViews(deals), [deals]);
   const activeDeal = liveDeals.find((deal) => deal.id === activeDealId);
   const dealVault = useDealVault(activeDeal?.contractAddress ?? SAMPLE_DEAL_ADDRESS);
   const visibleDeals = getVisibleDeals(liveDeals, tab);
@@ -36,10 +36,10 @@ export default function DealsPage() {
   }, []);
 
   async function refreshDeals() {
-    fetch("/api/admin/deals")
+    fetch("/api/v2/deals")
       .then((res) => res.json())
-      .then(setAdminDeals)
-      .catch(() => setAdminDeals([]));
+      .then((data: V2DealsResponse) => setDeals([...mapV2Deals(data.openDeals), ...mapV2Deals(data.closedDeals)]))
+      .catch(() => setDeals([]));
   }
 
   return (
@@ -156,6 +156,45 @@ export default function DealsPage() {
       </Modal>
     </div>
   );
+}
+
+type V2Deal = {
+  id: string;
+  contractAddress?: `0x${string}` | null;
+  title: string;
+  subtitle?: string | null;
+  riskLevel?: string | null;
+  status: "open" | "closed" | "archived" | string;
+  targetRaiseUsdc?: string | null;
+  totalRaisedUsdc?: string | null;
+  investorCount?: number;
+  fundingDeadline?: string;
+  closedAt?: string;
+};
+
+type V2DealsResponse = {
+  openDeals?: V2Deal[];
+  closedDeals?: V2Deal[];
+};
+
+function mapV2Deals(deals?: V2Deal[]): DealMetadata[] {
+  return (deals ?? []).map((deal) => ({
+    id: deal.id,
+    contractAddress: deal.contractAddress ?? undefined,
+    title: deal.title,
+    subtitle: deal.subtitle ?? undefined,
+    description: deal.subtitle ?? undefined,
+    riskLevel: deal.riskLevel ?? undefined,
+    status: deal.status === "closed" || deal.status === "archived" ? deal.status : "open",
+    targetRaise: deal.targetRaiseUsdc ?? "0",
+    totalRaised: deal.totalRaisedUsdc ?? "0",
+    investorCount: deal.investorCount,
+    fundingDeadline: deal.fundingDeadline,
+    closeDate: deal.closedAt,
+    revenueModel: "Revenue share",
+    payoutSchedule: deal.fundingDeadline ? `Funding deadline ${new Date(deal.fundingDeadline).toLocaleDateString("en-US")}` : "Awaiting Live Data",
+    expectedYield: "Revenue-based",
+  }));
 }
 
 function PreviewRow({ label, value }: { label: string; value: string }) {

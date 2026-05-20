@@ -24,6 +24,7 @@ const arcTestnet = {
 const configuredContracts = [
   { source: "monthlyVault", address: process.env.NEXT_PUBLIC_MONTHLY_VAULT_V2_ADDRESS ?? process.env.NEXT_PUBLIC_VAULT_ADDRESS },
   { source: "longTermVault", address: process.env.NEXT_PUBLIC_LONG_TERM_VAULT_V2_ADDRESS ?? process.env.NEXT_PUBLIC_LONG_TERM_VAULT_ADDRESS },
+  { source: "dealFactory", address: process.env.NEXT_PUBLIC_DEAL_FACTORY_V2_ADDRESS ?? process.env.NEXT_PUBLIC_DEAL_FACTORY_ADDRESS },
   { source: "marketplace", address: process.env.NEXT_PUBLIC_MARKETPLACE_V2_ADDRESS ?? process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS },
   { source: "sampleDeal", address: process.env.NEXT_PUBLIC_SAMPLE_DEAL_ADDRESS },
 ].filter((item) => isAddressLike(item.address));
@@ -40,7 +41,15 @@ const eventDefinitions = [
   parseAbiItem("event RevenueDistributed(address indexed source, uint256 amount)"),
   parseAbiItem("event YieldClaimed(address indexed investor, uint256 amount)"),
   parseAbiItem("event RaiseClosed()"),
+  parseAbiItem("event DealCreated(uint256 indexed dealId, address indexed dealVault, address indexed operator, string metadataId, uint256 targetRaise, uint256 minRaise, uint256 pricePerShare, uint256 closeTime)"),
+  parseAbiItem("event DealInvestment(uint256 indexed dealId, address indexed investor, uint256 assets, uint256 shares, uint256 totalRaisedAfter)"),
+  parseAbiItem("event DealRaiseClosed(uint256 indexed dealId, address indexed operator, uint256 totalRaised, uint256 closedAt)"),
+  parseAbiItem("event DealRevenueDistributed(uint256 indexed dealId, address indexed operator, uint256 amount, uint256 accRevenuePerShareAfter)"),
+  parseAbiItem("event DealYieldClaimed(uint256 indexed dealId, address indexed investor, uint256 amount)"),
   parseAbiItem("event ListingCreated(uint256 indexed listingId, address indexed seller, address indexed token, uint256 dealId, uint256 amount, uint256 pricePerShare)"),
+  parseAbiItem("event MarketplaceListingCreated(uint256 indexed listingId, uint256 indexed dealId, address indexed seller, address token, uint256 amount, uint256 pricePerShare)"),
+  parseAbiItem("event MarketplaceListingFilled(uint256 indexed listingId, uint256 indexed dealId, address indexed buyer, address seller, uint256 amount, uint256 totalPrice, uint256 amountRemaining)"),
+  parseAbiItem("event MarketplaceListingCancelled(uint256 indexed listingId, uint256 indexed dealId, address indexed seller, address token, uint256 returnedShares)"),
   parseAbiItem("event ListingFilled(uint256 indexed listingId, address indexed buyer, uint256 amount, uint256 totalPrice)"),
   parseAbiItem("event ListingCancelled(uint256 indexed listingId)"),
 ];
