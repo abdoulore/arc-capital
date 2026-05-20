@@ -8,6 +8,26 @@ const USDC_DECIMAL_SCALE = BigInt(1_000_000);
 const EVENT_DEFINITIONS = [
   {
     source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVaultV2,
+    abiItem: parseAbiItem("event MonthlyDeposit(address indexed user, uint256 assets, uint256 shares, uint256 pricePerShareAfter)"),
+  },
+  {
+    source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVaultV2,
+    abiItem: parseAbiItem("event MonthlyWithdrawRequested(address indexed user, uint256 indexed requestId, uint256 shares, uint256 grossAssets, uint256 requestTime)"),
+  },
+  {
+    source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVaultV2,
+    abiItem: parseAbiItem("event MonthlyWithdrawExecuted(address indexed user, uint256 indexed requestId, uint256 shares, uint256 grossAssets, uint256 penalty, uint256 netAssets, bool inWindow)"),
+  },
+  {
+    source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVaultV2,
+    abiItem: parseAbiItem("event MonthlyYieldInjected(address indexed operator, uint256 amount, uint256 routedYieldAfter, uint256 navAfter)"),
+  },
+  {
+    source: "monthlyVault",
     address: arcCapitalContracts.monthlyVault,
     abiItem: parseAbiItem("event Deposit(address indexed user, uint256 amount, uint256 shares)"),
   },
@@ -20,6 +40,26 @@ const EVENT_DEFINITIONS = [
     source: "monthlyVault",
     address: arcCapitalContracts.monthlyVault,
     abiItem: parseAbiItem("event WithdrawRequested(address indexed user, uint256 shares)"),
+  },
+  {
+    source: "longTermVault",
+    address: arcCapitalContracts.longTermVaultV2,
+    abiItem: parseAbiItem("event FixedIncomePositionOpened(address indexed user, uint256 indexed positionId, uint256 principal, uint256 duration, uint256 apyBps, uint256 start, uint256 maturity)"),
+  },
+  {
+    source: "longTermVault",
+    address: arcCapitalContracts.longTermVaultV2,
+    abiItem: parseAbiItem("event FixedIncomeYieldClaimed(address indexed user, uint256 indexed positionId, uint256 amount, uint256 lastClaimAfter)"),
+  },
+  {
+    source: "longTermVault",
+    address: arcCapitalContracts.longTermVaultV2,
+    abiItem: parseAbiItem("event FixedIncomeRedeemed(address indexed user, uint256 indexed positionId, uint256 principal, uint256 yieldPaid)"),
+  },
+  {
+    source: "longTermVault",
+    address: arcCapitalContracts.longTermVaultV2,
+    abiItem: parseAbiItem("event FixedIncomeEarlyExited(address indexed user, uint256 indexed positionId, uint256 returnedPrincipal, uint256 penalty)"),
   },
   {
     source: "longTermVault",
@@ -44,6 +84,31 @@ const EVENT_DEFINITIONS = [
   {
     source: "dealVault",
     address: undefined,
+    abiItem: parseAbiItem("event DealCreated(uint256 indexed dealId, address indexed dealVault, address indexed operator, string metadataId, uint256 targetRaise, uint256 minRaise, uint256 pricePerShare, uint256 closeTime)"),
+  },
+  {
+    source: "dealVault",
+    address: undefined,
+    abiItem: parseAbiItem("event DealInvestment(uint256 indexed dealId, address indexed investor, uint256 assets, uint256 shares, uint256 totalRaisedAfter)"),
+  },
+  {
+    source: "dealVault",
+    address: undefined,
+    abiItem: parseAbiItem("event DealRaiseClosed(uint256 indexed dealId, address indexed operator, uint256 totalRaised, uint256 closedAt)"),
+  },
+  {
+    source: "dealVault",
+    address: undefined,
+    abiItem: parseAbiItem("event DealRevenueDistributed(uint256 indexed dealId, address indexed operator, uint256 amount, uint256 accRevenuePerShareAfter)"),
+  },
+  {
+    source: "dealVault",
+    address: undefined,
+    abiItem: parseAbiItem("event DealYieldClaimed(uint256 indexed dealId, address indexed investor, uint256 amount)"),
+  },
+  {
+    source: "dealVault",
+    address: undefined,
     abiItem: parseAbiItem("event Invested(address indexed investor, uint256 assets, uint256 shares)"),
   },
   {
@@ -60,6 +125,21 @@ const EVENT_DEFINITIONS = [
     source: "dealVault",
     address: undefined,
     abiItem: parseAbiItem("event RaiseClosed()"),
+  },
+  {
+    source: "marketplace",
+    address: arcCapitalContracts.marketplaceV2,
+    abiItem: parseAbiItem("event MarketplaceListingCreated(uint256 indexed listingId, uint256 indexed dealId, address indexed seller, address token, uint256 amount, uint256 pricePerShare)"),
+  },
+  {
+    source: "marketplace",
+    address: arcCapitalContracts.marketplaceV2,
+    abiItem: parseAbiItem("event MarketplaceListingFilled(uint256 indexed listingId, uint256 indexed dealId, address indexed buyer, address seller, uint256 amount, uint256 totalPrice, uint256 amountRemaining)"),
+  },
+  {
+    source: "marketplace",
+    address: arcCapitalContracts.marketplaceV2,
+    abiItem: parseAbiItem("event MarketplaceListingCancelled(uint256 indexed listingId, uint256 indexed dealId, address indexed seller, address token, uint256 returnedShares)"),
   },
   {
     source: "marketplace",

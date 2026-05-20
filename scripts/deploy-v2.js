@@ -95,6 +95,10 @@ function printFrontendEnv(registry) {
   console.log(`NEXT_PUBLIC_LONG_TERM_VAULT_ADDRESS=${registry.contracts.longTermVault}`);
   console.log(`NEXT_PUBLIC_DEAL_FACTORY_ADDRESS=${registry.contracts.dealFactory}`);
   console.log(`NEXT_PUBLIC_MARKETPLACE_ADDRESS=${registry.contracts.marketplace}`);
+  console.log(`NEXT_PUBLIC_MONTHLY_VAULT_V2_ADDRESS=${registry.contracts.monthlyVault}`);
+  console.log(`NEXT_PUBLIC_LONG_TERM_VAULT_V2_ADDRESS=${registry.contracts.longTermVault}`);
+  console.log(`NEXT_PUBLIC_DEAL_FACTORY_V2_ADDRESS=${registry.contracts.dealFactory}`);
+  console.log(`NEXT_PUBLIC_MARKETPLACE_V2_ADDRESS=${registry.contracts.marketplace}`);
   console.log(`NEXT_PUBLIC_YIELD_ROUTER_ADDRESS=${registry.contracts.yieldRouter}`);
   console.log(`NEXT_PUBLIC_NAV_ORACLE_ADDRESS=${registry.contracts.navOracle}`);
   console.log(`NEXT_PUBLIC_SAMPLE_DEAL_ADDRESS=`);

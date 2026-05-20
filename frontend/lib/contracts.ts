@@ -12,7 +12,11 @@ export type ArcCapitalContractName =
   | "sampleDeal"
   | "marketplace"
   | "yieldRouter"
-  | "navOracle";
+  | "navOracle"
+  | "monthlyVaultV2"
+  | "longTermVaultV2"
+  | "dealFactoryV2"
+  | "marketplaceV2";
 
 const ADDRESS_ENV_KEYS: Record<ArcCapitalContractName, string> = {
   usdc: "NEXT_PUBLIC_USDC_ADDRESS",
@@ -24,6 +28,10 @@ const ADDRESS_ENV_KEYS: Record<ArcCapitalContractName, string> = {
   marketplace: "NEXT_PUBLIC_MARKETPLACE_ADDRESS",
   yieldRouter: "NEXT_PUBLIC_YIELD_ROUTER_ADDRESS",
   navOracle: "NEXT_PUBLIC_NAV_ORACLE_ADDRESS",
+  monthlyVaultV2: "NEXT_PUBLIC_MONTHLY_VAULT_V2_ADDRESS",
+  longTermVaultV2: "NEXT_PUBLIC_LONG_TERM_VAULT_V2_ADDRESS",
+  dealFactoryV2: "NEXT_PUBLIC_DEAL_FACTORY_V2_ADDRESS",
+  marketplaceV2: "NEXT_PUBLIC_MARKETPLACE_V2_ADDRESS",
 };
 
 const FALLBACK_ADDRESSES: Partial<Record<ArcCapitalContractName, Address>> = {
@@ -40,6 +48,10 @@ export const arcCapitalContracts = Object.freeze({
   marketplace: publicContractAddress("marketplace"),
   yieldRouter: publicContractAddress("yieldRouter"),
   navOracle: publicContractAddress("navOracle"),
+  monthlyVaultV2: publicContractAddress("monthlyVaultV2", publicContractAddress("monthlyVault")),
+  longTermVaultV2: publicContractAddress("longTermVaultV2", publicContractAddress("longTermVault")),
+  dealFactoryV2: publicContractAddress("dealFactoryV2", publicContractAddress("dealFactory")),
+  marketplaceV2: publicContractAddress("marketplaceV2", publicContractAddress("marketplace")),
 });
 
 export function publicContractAddress(name: ArcCapitalContractName, fallback = FALLBACK_ADDRESSES[name] ?? ZERO_ADDRESS) {

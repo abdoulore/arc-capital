@@ -680,7 +680,7 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
   const timestamp = event.blockTimestamp ? new Date(event.blockTimestamp).toISOString() : new Date().toISOString();
   const eventName = event.eventName.toLowerCase();
   const wallet = stringValue(payload.user ?? payload.investor ?? payload.wallet ?? event.actorWallet)?.toLowerCase();
-  const amountUsdc = decimalString(payload.amountUsdc ?? payload.amount ?? payload.assets);
+  const amountUsdc = decimalString(payload.amountUsdc ?? payload.amount ?? payload.assets ?? payload.netAssets ?? payload.principal);
   const shares = decimalString(payload.shares ?? payload.shareAmount ?? payload.value);
 
   if (wallet) {
@@ -692,7 +692,7 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
     );
   }
 
-  if (eventName === "deposit" && wallet) {
+  if ((eventName === "deposit" || eventName === "monthlydeposit") && wallet) {
     await pool.query(
       `insert into v2_monthly_vault_activity (id, wallet, activity_type, amount_usdc, shares, tx_hash, occurred_at)
        values ($1, $2, 'Monthly Vault deposit', $3, $4, $5, $6)
@@ -710,7 +710,7 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
     );
   }
 
-  if (eventName === "withdraw" && wallet) {
+  if ((eventName === "withdraw" || eventName === "monthlywithdrawexecuted") && wallet) {
     await pool.query(
       `insert into v2_monthly_vault_activity (id, wallet, activity_type, amount_usdc, shares, tx_hash, occurred_at)
        values ($1, $2, 'Monthly Vault withdrawal', $3, $4, $5, $6)
@@ -727,13 +727,35 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
     );
   }
 
-  if ((eventName === "invested" || eventName === "dealinvested") && wallet) {
+  if ((eventName === "invested" || eventName === "dealinvested" || eventName === "dealinvestment") && wallet) {
     const dealId = stringValue(payload.dealId);
     await pool.query(
       `insert into v2_deal_investments (id, deal_id, investor_wallet, amount_usdc, shares, tx_hash, invested_at)
        values ($1, $2, $3, $4, $5, $6, $7)
        on conflict (tx_hash) do nothing`,
       [crypto.randomUUID(), dealId || null, wallet, amountUsdc, shares, event.txHash, timestamp],
+    );
+  }
+
+  if (eventName === "fixedincomepositionopened" && wallet) {
+    await pool.query(
+      `insert into v2_fixed_income_positions (
+         id, wallet, onchain_position_id, principal_usdc, apy_bps,
+         duration_seconds, start_at, maturity_at, claimable_yield_usdc, created_tx_hash
+       )
+       values ($1, $2, $3, $4, $5, $6, to_timestamp($7), to_timestamp($8), 0, $9)
+       on conflict (id) do nothing`,
+      [
+        crypto.randomUUID(),
+        wallet,
+        stringValue(payload.positionId) ?? "0",
+        decimalString(payload.amountUsdc ?? payload.principal),
+        Number(payload.apyBps ?? 0),
+        Number(payload.duration ?? 0),
+        Number(payload.start ?? 0),
+        Number(payload.maturity ?? 0),
+        event.txHash,
+      ],
     );
   }
 }

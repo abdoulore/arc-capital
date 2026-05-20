@@ -183,6 +183,15 @@ Optional environment variables:
 
 The deploy script prints frontend/Vercel env vars and writes a local ignored registry under `deployments/`.
 
+V2-specific frontend env vars:
+
+- `NEXT_PUBLIC_MONTHLY_VAULT_V2_ADDRESS`
+- `NEXT_PUBLIC_LONG_TERM_VAULT_V2_ADDRESS`
+- `NEXT_PUBLIC_DEAL_FACTORY_V2_ADDRESS`
+- `NEXT_PUBLIC_MARKETPLACE_V2_ADDRESS`
+
+During migration, these fall back to the existing V1 env names so the UI can move module by module.
+
 Frontend-owned logic:
 
 - wallet connection
