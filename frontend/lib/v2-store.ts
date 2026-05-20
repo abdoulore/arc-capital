@@ -281,6 +281,73 @@ export async function getV2FixedIncome(wallet?: string | null) {
   return { status: "live" as V2DataStatus, positions, obligations };
 }
 
+export async function getV2AdminLongTerm() {
+  const pool = await getV2Pool();
+  if (!pool) {
+    return {
+      status: "pending" as V2DataStatus,
+      activePositions: 0,
+      lockedCapital: "0",
+      claimableYield: "0",
+      upcomingUnlockCount: 0,
+      pools: [],
+      upcomingUnlocks: [],
+    };
+  }
+
+  const [summary, pools, upcomingUnlocks] = await Promise.all([
+    one<{ active_positions: string; locked_capital: string; claimable_yield: string; upcoming_unlock_count: string }>(
+      pool,
+      `select
+         count(*) filter (where redeemed_at is null)::text as active_positions,
+         coalesce(sum(principal_usdc) filter (where redeemed_at is null), 0)::text as locked_capital,
+         coalesce(sum(claimable_yield_usdc) filter (where redeemed_at is null), 0)::text as claimable_yield,
+         count(*) filter (where redeemed_at is null and maturity_at <= now() + interval '90 days')::text as upcoming_unlock_count
+       from v2_fixed_income_positions`,
+    ),
+    many<{ duration_seconds: number; principal: string; claimable_yield: string; positions: string }>(
+      pool,
+      `select duration_seconds,
+              coalesce(sum(principal_usdc) filter (where redeemed_at is null), 0)::text as principal,
+              coalesce(sum(claimable_yield_usdc) filter (where redeemed_at is null), 0)::text as claimable_yield,
+              count(*) filter (where redeemed_at is null)::text as positions
+       from v2_fixed_income_positions
+       group by duration_seconds
+       order by duration_seconds asc`,
+    ),
+    many<{ onchain_position_id: string | null; wallet: string; principal_usdc: string; maturity_at: Date; apy_bps: number }>(
+      pool,
+      `select onchain_position_id, wallet, principal_usdc, maturity_at, apy_bps
+       from v2_fixed_income_positions
+       where redeemed_at is null
+       order by maturity_at asc
+       limit 25`,
+    ),
+  ]);
+
+  return {
+    status: "live" as V2DataStatus,
+    activePositions: Number(summary?.active_positions ?? 0),
+    lockedCapital: summary?.locked_capital ?? "0",
+    claimableYield: summary?.claimable_yield ?? "0",
+    upcomingUnlockCount: Number(summary?.upcoming_unlock_count ?? 0),
+    pools: pools.map((pool) => ({
+      label: durationLabel(pool.duration_seconds),
+      duration: String(pool.duration_seconds),
+      principal: pool.principal,
+      claimableYield: pool.claimable_yield,
+      positions: Number(pool.positions),
+    })),
+    upcomingUnlocks: upcomingUnlocks.map((unlock) => ({
+      id: unlock.onchain_position_id ?? "",
+      owner: unlock.wallet,
+      principal: unlock.principal_usdc,
+      maturity: unlock.maturity_at.toISOString(),
+      apyBps: String(unlock.apy_bps),
+    })),
+  };
+}
+
 export async function getV2Deals() {
   const pool = await getV2Pool();
   if (!pool) return { status: "pending" as V2DataStatus, openDeals: [], closedDeals: [] };
@@ -1201,6 +1268,14 @@ function deriveDealStatus(status: string, deadline?: Date | null) {
   if (status !== "open") return status;
   if (deadline && deadline.getTime() <= Date.now()) return "closed";
   return "open";
+}
+
+function durationLabel(durationSeconds: number) {
+  const days = durationSeconds / 86_400;
+  if (days >= 1090) return "3 year pool";
+  if (days >= 725) return "2 year pool";
+  if (days >= 360) return "1 year pool";
+  return "Fixed-term pool";
 }
 
 function normalizeWallet(wallet: string) {

@@ -36,7 +36,7 @@ export default function AdminLongTermPage() {
 
   function refreshAnalytics() {
     setLoading(true);
-    fetch("/api/admin/long-term")
+    fetch("/api/v2/admin/long-term", { cache: "no-store" })
       .then((res) => res.json())
       .then((payload) => {
         setAnalytics(payload);
@@ -105,7 +105,7 @@ export default function AdminLongTermPage() {
       </AdminPanel>
       <AdminPanel title="Upcoming unlock schedule">
         <div className="divide-y divide-[var(--line)]">
-          {loadError ? <p className="py-6 text-sm text-[var(--muted)]">Long-term analytics unavailable. Retry after the RPC recovers.</p> : null}
+          {loadError ? <p className="py-6 text-sm text-[var(--muted)]">Long-term analytics unavailable.</p> : null}
           {!loadError && (!analytics || analytics.upcomingUnlocks.length === 0) ? <p className="py-6 text-sm text-[var(--muted)]">No upcoming unlocks.</p> : null}
           {analytics?.upcomingUnlocks.map((unlock) => (
             <div key={unlock.id} className="flex flex-col gap-1 py-3 text-sm md:flex-row md:items-center md:justify-between">
@@ -115,7 +115,7 @@ export default function AdminLongTermPage() {
               </div>
               <div className="text-[var(--muted)] md:text-right">
                 <p>{formatTokenAmount(toBigInt(unlock.principal), 6, "USDC", 2)} principal</p>
-                <p>{formatDate(BigInt(unlock.maturity))} at {formatPercent(Number(unlock.apyBps) / 100)}</p>
+                <p>{formatDate(unlock.maturity)} at {formatPercent(Number(unlock.apyBps) / 100)}</p>
               </div>
             </div>
           ))}

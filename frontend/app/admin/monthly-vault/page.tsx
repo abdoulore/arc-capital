@@ -1,15 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { formatUnits } from "viem";
 import { AdminButton, AdminHeader, AdminInput, AdminMetric, AdminPanel, formatUsdc } from "@/components/admin/admin-ui";
 import { useAdminContracts } from "@/hooks/useAdminContracts";
-import { VAULT_ADDRESS } from "@/app/constants";
 import { formatDate, formatNumber, formatPercent } from "@/lib/utils";
-
-type TreasurySummary = {
-  history: Array<{ destination: string; amount: string; type: string }>;
-};
 
 export default function AdminMonthlyVaultPage() {
   const admin = useAdminContracts();
@@ -20,20 +15,7 @@ export default function AdminMonthlyVaultPage() {
   const [windowDurationDays, setWindowDurationDays] = useState("7");
   const [nav, setNav] = useState("");
   const [yieldAmount, setYieldAmount] = useState("");
-  const [treasurySummary, setTreasurySummary] = useState<TreasurySummary | null>(null);
-
-  useEffect(() => {
-    fetch("/api/admin/treasury", { cache: "no-store" })
-      .then((res) => res.json())
-      .then(setTreasurySummary)
-      .catch(() => setTreasurySummary(null));
-  }, []);
-
-  const monthlyRoutedYield = useMemo(() => {
-    return treasurySummary?.history
-      .filter((item) => item.destination?.toLowerCase() === VAULT_ADDRESS.toLowerCase())
-      .reduce((total, item) => total + BigInt(item.amount || "0"), BigInt(0)) ?? BigInt(0);
-  }, [treasurySummary]);
+  const monthlyRoutedYield = admin.metrics.totalRoutedYield ?? BigInt(0);
   const monthlyTVL = admin.metrics.monthlyTVL ?? BigInt(0);
   const estimatedInvestorCapital = monthlyTVL > monthlyRoutedYield ? monthlyTVL - monthlyRoutedYield : BigInt(0);
   const navPerShare =

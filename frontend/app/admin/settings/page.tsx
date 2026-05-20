@@ -28,7 +28,7 @@ export default function AdminSettingsPage() {
   });
 
   useEffect(() => {
-    fetch("/api/admin/settings").then((res) => res.json()).then(setSettings).catch(() => undefined);
+    fetch("/api/v2/admin/settings").then((res) => res.json()).then(setSettings).catch(() => undefined);
   }, []);
 
   async function save() {
@@ -54,7 +54,7 @@ export default function AdminSettingsPage() {
 
     setSaving(true);
     try {
-      const response = await fetch("/api/admin/settings", {
+      const response = await fetch("/api/v2/admin/settings", {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),

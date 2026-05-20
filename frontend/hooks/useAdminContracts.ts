@@ -4,27 +4,17 @@ import { useState } from "react";
 import { Hash, parseUnits, type Address } from "viem";
 import { usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import {
-  DEAL_FACTORY_ABI,
-  DEAL_FACTORY_ADDRESS,
   DEAL_FACTORY_V2_ABI,
   DEAL_FACTORY_V2_ADDRESS,
-  DEAL_VAULT_ABI,
   DEAL_VAULT_V2_ABI,
-  LONG_TERM_VAULT_ABI,
-  LONG_TERM_VAULT_ADDRESS,
   LONG_TERM_VAULT_V2_ABI,
   LONG_TERM_VAULT_V2_ADDRESS,
-  MARKETPLACE_ABI,
-  MARKETPLACE_ADDRESS,
+  MARKETPLACE_V2_ABI,
+  MARKETPLACE_V2_ADDRESS,
   MONTHLY_VAULT_V2_ABI,
   MONTHLY_VAULT_V2_ADDRESS,
-  SAMPLE_DEAL_ADDRESS,
   USDC_ABI,
   USDC_ADDRESS,
-  VAULT_ABI,
-  VAULT_ADDRESS,
-  YIELD_ROUTER_ABI,
-  YIELD_ROUTER_ADDRESS,
 } from "@/app/constants";
 import { useIsAdmin } from "@/hooks/useAdmin";
 import { useTransactionToast } from "@/store/useTransactionToast";
@@ -46,32 +36,28 @@ export function useAdminContracts() {
   const { addToast, updateToast } = useTransactionToast();
   const [transaction, setTransaction] = useState<AdminTxState>({ label: "", status: "idle" });
 
-  const monthlyTVL = useReadContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "totalAssets", query: { refetchInterval: 10000 } });
-  const monthlyPricePerShare = useReadContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "pricePerShare", query: { refetchInterval: 10000 } });
-  const totalShares = useReadContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "totalShares", query: { refetchInterval: 10000 } });
-  const liquidityBuffer = useReadContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "idleBufferBps" });
-  const penaltyBps = useReadContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "penaltyBps" });
-  const windowStart = useReadContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "withdrawalWindowStart" });
-  const windowDuration = useReadContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "withdrawalWindowDuration" });
-  const treasury = useReadContract({ address: YIELD_ROUTER_ADDRESS, abi: YIELD_ROUTER_ABI, functionName: "treasury" });
-  const dealCount = useReadContract({ address: DEAL_FACTORY_ADDRESS, abi: DEAL_FACTORY_ABI, functionName: "dealCount" });
-  const sampleDealClosed = useReadContract({ address: SAMPLE_DEAL_ADDRESS, abi: DEAL_VAULT_ABI, functionName: "raiseClosed", query: { refetchInterval: 10000 } });
-  const sampleDealDeployed = useReadContract({ address: SAMPLE_DEAL_ADDRESS, abi: DEAL_VAULT_ABI, functionName: "capitalDeployed", query: { refetchInterval: 10000 } });
-  const listing = useReadContract({ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, functionName: "listings", args: [BigInt(0)], query: { refetchInterval: 10000 } });
+  const monthlyTVL = useReadContract({ address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "totalAssets", query: { refetchInterval: 10000 } });
+  const monthlyPricePerShare = useReadContract({ address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "pricePerShare", query: { refetchInterval: 10000 } });
+  const totalShares = useReadContract({ address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "totalShares", query: { refetchInterval: 10000 } });
+  const totalRoutedYield = useReadContract({ address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "totalRoutedYield", query: { refetchInterval: 10000 } });
+  const liquidityBuffer = useReadContract({ address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "liquidityReserveBps" });
+  const penaltyBps = useReadContract({ address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "penaltyBps" });
+  const windowStart = useReadContract({ address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "withdrawalWindowStart" });
+  const windowDuration = useReadContract({ address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "withdrawalWindowDuration" });
+  const dealCount = useReadContract({ address: DEAL_FACTORY_V2_ADDRESS, abi: DEAL_FACTORY_V2_ABI, functionName: "dealCount" });
+  const listing = useReadContract({ address: MARKETPLACE_V2_ADDRESS, abi: MARKETPLACE_V2_ABI, functionName: "listings", args: [BigInt(0)], query: { refetchInterval: 10000 } });
 
   const refresh = async () => {
     await Promise.all([
       monthlyTVL.refetch(),
       monthlyPricePerShare.refetch(),
       totalShares.refetch(),
+      totalRoutedYield.refetch(),
       liquidityBuffer.refetch(),
       penaltyBps.refetch(),
       windowStart.refetch(),
       windowDuration.refetch(),
-      treasury.refetch(),
       dealCount.refetch(),
-      sampleDealClosed.refetch(),
-      sampleDealDeployed.refetch(),
       listing.refetch(),
     ]);
   };
@@ -85,47 +71,48 @@ export function useAdminContracts() {
       monthlyTVL: monthlyTVL.data,
       monthlyPricePerShare: monthlyPricePerShare.data,
       totalShares: totalShares.data,
+      totalRoutedYield: totalRoutedYield.data,
       liquidityBuffer: liquidityBuffer.data,
       penaltyBps: penaltyBps.data,
       windowStart: windowStart.data,
       windowDuration: windowDuration.data,
-      treasury: treasury.data,
+      treasury: undefined,
       dealCount: dealCount.data,
-      sampleDealClosed: sampleDealClosed.data,
-      sampleDealDeployed: sampleDealDeployed.data,
+      sampleDealClosed: undefined,
+      sampleDealDeployed: undefined,
       listing: listing.data,
     },
     setLiquidityBuffer: (bps: string) =>
       run("Update liquidity reserve", [
-        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "setIdleBuffer", args: [BigInt(bps || "0")] } }),
+        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "configureLiquidityReserve", args: [BigInt(bps || "0")] } }),
       ]),
     setPenalty: (bps: string) =>
       run("Update withdrawal penalty", [
-        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "setPenalty", args: [BigInt(bps || "0")] } }),
+        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "configurePenalty", args: [BigInt(bps || "0")] } }),
       ]),
     setWithdrawLimit: (bps: string) =>
       run("Update withdrawal limit", [
-        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "setWithdrawLimit", args: [BigInt(bps || "0")] } }),
+        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "configureMaxWithdraw", args: [BigInt(bps || "0")] } }),
       ]),
     configureLongTermTranche: (duration: number, apyBps: string, enabled = true) =>
       run("Configure fixed-income tranche", [
-        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: LONG_TERM_VAULT_ADDRESS, abi: LONG_TERM_VAULT_ABI, functionName: "configureTranche", args: [BigInt(duration), BigInt(apyBps || "0"), enabled] } }),
+        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: LONG_TERM_VAULT_V2_ADDRESS, abi: LONG_TERM_VAULT_V2_ABI, functionName: "configureTranche", args: [BigInt(duration), BigInt(apyBps || "0"), enabled] } }),
       ]),
     setLongTermTreasury: (treasuryAddress: Address) =>
       run("Update fixed-income treasury", [
-        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: LONG_TERM_VAULT_ADDRESS, abi: LONG_TERM_VAULT_ABI, functionName: "setTreasury", args: [treasuryAddress] } }),
+        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: LONG_TERM_VAULT_V2_ADDRESS, abi: LONG_TERM_VAULT_V2_ABI, functionName: "setTreasury", args: [treasuryAddress] } }),
       ]),
     openWithdrawalWindow: () =>
       run("Open withdrawal window", [
-        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "setWithdrawalWindow", args: [BigInt(Math.floor(Date.now() / 1000)), BigInt(7 * 24 * 60 * 60)] } }),
+        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "configureWithdrawalWindow", args: [BigInt(Math.floor(Date.now() / 1000)), BigInt(7 * 24 * 60 * 60)] } }),
       ]),
     setWithdrawalWindow: (startSeconds: bigint, durationSeconds: bigint) =>
       run("Configure withdrawal window", [
-        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "setWithdrawalWindow", args: [startSeconds, durationSeconds] } }),
+        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "configureWithdrawalWindow", args: [startSeconds, durationSeconds] } }),
       ]),
     updateNAV: (amount: string) =>
       run("Update vault NAV", [
-        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: "updateNAV", args: [parseUnits(amount || "0", 6)] } }),
+        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: MONTHLY_VAULT_V2_ADDRESS, abi: MONTHLY_VAULT_V2_ABI, functionName: "updateNAV", args: [parseUnits(amount || "0", 6)] } }),
       ]),
     injectMonthlyYield: async (amount: string) => {
       const parsedAmount = parseUnits(amount || "0", 6);
@@ -183,15 +170,15 @@ export function useAdminContracts() {
         args: [dealIndex],
       });
     },
-    closeDealFunding: (dealAddress: Address = SAMPLE_DEAL_ADDRESS) =>
+    closeDealFunding: (dealAddress: Address) =>
       run("Close deal funding", [
         () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: dealAddress, abi: DEAL_VAULT_V2_ABI, functionName: "adminCloseRaise" } }),
       ]),
-    markDealCapitalDeployed: (dealAddress: Address = SAMPLE_DEAL_ADDRESS) =>
+    markDealCapitalDeployed: (dealAddress: Address) =>
       run("Mark deal capital deployed", [
         () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: dealAddress, abi: DEAL_VAULT_V2_ABI, functionName: "markCapitalDeployed" } }),
       ]),
-    distributeDealRevenue: async (amount: string, dealAddress: Address = SAMPLE_DEAL_ADDRESS) => {
+    distributeDealRevenue: async (amount: string, dealAddress: Address) => {
       const parsedAmount = parseUnits(amount || "0", 6);
       const steps = await buildApprovalSteps(dealAddress, parsedAmount);
       return run("Distribute deal revenue", [
