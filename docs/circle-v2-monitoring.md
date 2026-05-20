@@ -53,6 +53,16 @@ Required request header:
 x-indexer-secret: <INDEXER_WEBHOOK_SECRET>
 ```
 
+If the Circle Console webhook screen does not provide a custom header field, use a secret query parameter in the URL instead:
+
+```text
+https://your-domain.vercel.app/api/v2/indexer/circle?secret=<INDEXER_WEBHOOK_SECRET>
+```
+
+The endpoint accepts either the `x-indexer-secret` header or the `secret` query parameter. Keep the secret long and random, and do not publish the webhook URL publicly.
+
+Circle may send a `HEAD` request and a `webhooks.test` notification when registering the endpoint. The V2 endpoint responds to both so the subscription can be saved successfully.
+
 ## Contracts To Monitor
 
 - Monthly Vault V2
