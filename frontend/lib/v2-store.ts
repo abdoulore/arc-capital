@@ -23,11 +23,73 @@ export type V2ActivityRow = {
   source: "indexed" | "pending";
 };
 
+export type V2IndexedEventInput = {
+  chainId?: number;
+  contractAddress: string;
+  eventName: string;
+  txHash: string;
+  logIndex: number;
+  blockNumber: string | number | bigint;
+  blockTimestamp?: string;
+  actorWallet?: string;
+  payload?: Record<string, unknown>;
+};
+
 export async function getV2BackendStatus() {
   const pool = await getV2Pool();
   return {
     database: pool ? "connected" : "pending",
     source: pool ? "PostgreSQL indexed data" : "Pending Integration",
+  };
+}
+
+export async function ingestV2Events(events: V2IndexedEventInput[]) {
+  const pool = await getV2Pool();
+  if (!pool) {
+    return {
+      status: "pending" as V2DataStatus,
+      accepted: 0,
+      inserted: 0,
+      skipped: events.length,
+      message: "Pending Integration",
+    };
+  }
+
+  let inserted = 0;
+  for (const event of events) {
+    const result = await pool.query<{ id: string }>(
+      `insert into v2_contract_events (
+         id, chain_id, contract_address, event_name, tx_hash, log_index,
+         block_number, block_timestamp, actor_wallet, payload
+       )
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       on conflict (chain_id, tx_hash, log_index) do nothing
+       returning id`,
+      [
+        crypto.randomUUID(),
+        event.chainId ?? ARC_TESTNET_CHAIN_ID,
+        event.contractAddress.toLowerCase(),
+        event.eventName,
+        event.txHash,
+        event.logIndex,
+        event.blockNumber.toString(),
+        event.blockTimestamp ? new Date(event.blockTimestamp).toISOString() : null,
+        event.actorWallet?.toLowerCase() ?? null,
+        event.payload ?? {},
+      ],
+    );
+
+    if (result.rowCount) {
+      inserted += 1;
+      await projectV2Event(pool, event);
+    }
+  }
+
+  return {
+    status: "live" as V2DataStatus,
+    accepted: events.length,
+    inserted,
+    skipped: events.length - inserted,
   };
 }
 
@@ -454,6 +516,21 @@ async function getV2Pool() {
 
 async function ensureV2Schema(pool: Pool) {
   await pool.query(`
+    create table if not exists v2_contract_events (
+      id uuid primary key,
+      chain_id integer not null,
+      contract_address text not null,
+      event_name text not null,
+      tx_hash text not null,
+      log_index integer not null,
+      block_number numeric(78, 0) not null,
+      block_timestamp timestamptz,
+      actor_wallet text,
+      payload jsonb not null default '{}',
+      indexed_at timestamptz not null default now(),
+      unique (chain_id, tx_hash, log_index)
+    );
+
     create table if not exists v2_users (
       wallet text primary key,
       first_seen_at timestamptz not null default now(),
@@ -591,10 +668,74 @@ async function ensureV2Schema(pool: Pool) {
     );
 
     create index if not exists v2_portfolio_snapshots_wallet_idx on v2_portfolio_snapshots (wallet, snapshot_at desc);
+    create index if not exists v2_contract_events_actor_idx on v2_contract_events (actor_wallet, block_timestamp desc);
     create index if not exists v2_deals_status_idx on v2_deals (status, funding_deadline);
     create index if not exists v2_monthly_vault_activity_wallet_idx on v2_monthly_vault_activity (wallet, occurred_at desc);
     create index if not exists v2_marketplace_listings_status_idx on v2_marketplace_listings (status, created_at desc);
   `);
+}
+
+async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
+  const payload = event.payload ?? {};
+  const timestamp = event.blockTimestamp ? new Date(event.blockTimestamp).toISOString() : new Date().toISOString();
+  const eventName = event.eventName.toLowerCase();
+  const wallet = stringValue(payload.user ?? payload.investor ?? payload.wallet ?? event.actorWallet)?.toLowerCase();
+  const amountUsdc = decimalString(payload.amountUsdc ?? payload.amount ?? payload.assets);
+  const shares = decimalString(payload.shares ?? payload.shareAmount ?? payload.value);
+
+  if (wallet) {
+    await pool.query(
+      `insert into v2_users (wallet, first_seen_at, last_seen_at)
+       values ($1, $2, $2)
+       on conflict (wallet) do update set last_seen_at = excluded.last_seen_at`,
+      [wallet, timestamp],
+    );
+  }
+
+  if (eventName === "deposit" && wallet) {
+    await pool.query(
+      `insert into v2_monthly_vault_activity (id, wallet, activity_type, amount_usdc, shares, tx_hash, occurred_at)
+       values ($1, $2, 'Monthly Vault deposit', $3, $4, $5, $6)
+       on conflict (tx_hash) do nothing`,
+      [crypto.randomUUID(), wallet, amountUsdc, shares, event.txHash, timestamp],
+    );
+    await pool.query(
+      `insert into v2_monthly_vault_positions (wallet, shares, current_value_usdc, updated_at)
+       values ($1, $2, $3, $4)
+       on conflict (wallet) do update set
+         shares = v2_monthly_vault_positions.shares + excluded.shares,
+         current_value_usdc = v2_monthly_vault_positions.current_value_usdc + excluded.current_value_usdc,
+         updated_at = excluded.updated_at`,
+      [wallet, shares, amountUsdc, timestamp],
+    );
+  }
+
+  if (eventName === "withdraw" && wallet) {
+    await pool.query(
+      `insert into v2_monthly_vault_activity (id, wallet, activity_type, amount_usdc, shares, tx_hash, occurred_at)
+       values ($1, $2, 'Monthly Vault withdrawal', $3, $4, $5, $6)
+       on conflict (tx_hash) do nothing`,
+      [crypto.randomUUID(), wallet, amountUsdc, shares, event.txHash, timestamp],
+    );
+    await pool.query(
+      `insert into v2_monthly_vault_positions (wallet, shares, current_value_usdc, updated_at)
+       values ($1, 0, 0, $2)
+       on conflict (wallet) do update set
+         current_value_usdc = greatest(v2_monthly_vault_positions.current_value_usdc - $3::numeric, 0),
+         updated_at = excluded.updated_at`,
+      [wallet, timestamp, amountUsdc],
+    );
+  }
+
+  if ((eventName === "invested" || eventName === "dealinvested") && wallet) {
+    const dealId = stringValue(payload.dealId);
+    await pool.query(
+      `insert into v2_deal_investments (id, deal_id, investor_wallet, amount_usdc, shares, tx_hash, invested_at)
+       values ($1, $2, $3, $4, $5, $6, $7)
+       on conflict (tx_hash) do nothing`,
+      [crypto.randomUUID(), dealId || null, wallet, amountUsdc, shares, event.txHash, timestamp],
+    );
+  }
 }
 
 async function one<T extends QueryResultRow>(pool: Pool, text: string, values: unknown[] = []) {
@@ -637,6 +778,17 @@ function deriveDealStatus(status: string, deadline?: Date | null) {
 
 function normalizeWallet(wallet: string) {
   return wallet.trim().toLowerCase();
+}
+
+function decimalString(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value.toString();
+  if (typeof value === "bigint") return value.toString();
+  if (typeof value === "string" && value.trim()) return value.trim();
+  return "0";
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function needsSsl(connectionString: string) {

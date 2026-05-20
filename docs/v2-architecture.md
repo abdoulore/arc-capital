@@ -113,6 +113,44 @@ Backend-owned calculations:
 - transaction history
 - validation rules
 
+## Event Ingestion
+
+V2 indexes contract activity through a normalized event ingestion layer.
+
+Endpoint:
+
+- `POST /api/v2/indexer/events`
+
+The endpoint accepts batches of already-normalized events, deduplicates them by `chainId + txHash + logIndex`, stores the raw event in `v2_contract_events`, and projects known event types into summary tables.
+
+Production deployments should set `INDEXER_WEBHOOK_SECRET` and send it as the `x-indexer-secret` request header.
+
+Initial normalized event shape:
+
+```json
+{
+  "events": [
+    {
+      "chainId": 5042002,
+      "contractAddress": "0x...",
+      "eventName": "Deposit",
+      "txHash": "0x...",
+      "logIndex": 0,
+      "blockNumber": "12345",
+      "blockTimestamp": "2026-05-20T00:00:00.000Z",
+      "actorWallet": "0x...",
+      "payload": {
+        "user": "0x...",
+        "amount": "100.000000",
+        "shares": "10.000000"
+      }
+    }
+  ]
+}
+```
+
+Circle event monitors or an Arc RPC polling worker can both feed this normalized endpoint. User-facing API routes should consume the indexed tables, not scan chain history directly.
+
 Frontend-owned logic:
 
 - wallet connection
