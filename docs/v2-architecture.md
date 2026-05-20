@@ -151,6 +151,18 @@ Initial normalized event shape:
 
 Circle event monitors or an Arc RPC polling worker can both feed this normalized endpoint. User-facing API routes should consume the indexed tables, not scan chain history directly.
 
+Circle webhook endpoint:
+
+- `POST /api/v2/indexer/circle`
+
+This endpoint accepts Circle Smart Contract Platform event monitor webhooks and normalizes them into the same ingestion path.
+
+Development / backfill worker:
+
+- `npm run index:v2`
+
+The worker scans configured Arc contracts in chunks and posts decoded events to `V2_INDEXER_INGEST_URL`. Use it for local development, testnet backfills, and recovery. Production should prefer Circle event monitors where available.
+
 Frontend-owned logic:
 
 - wallet connection

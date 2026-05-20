@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "index:v2": "node scripts/v2-indexer.mjs",
     "lint": "eslint"
   },
   "dependencies": {
