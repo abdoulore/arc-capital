@@ -2,22 +2,42 @@
 
 import { useEffect, useState } from "react";
 import { AdminHeader, AdminPanel } from "@/components/admin/admin-ui";
+import { ARC_TESTNET_EXPLORER_URL } from "@/lib/network";
 import { formatAddress, formatDate } from "@/lib/utils";
 
 type Activity = {
   id: string;
   timestamp: string;
-  operator?: string;
+  operatorWallet?: string | null;
   action: string;
   summary: string;
-  hash?: string;
+  txHash?: string | null;
 };
 
 export default function AdminActivityPage() {
   const [activity, setActivity] = useState<Activity[]>([]);
 
   useEffect(() => {
-    fetch("/api/admin/activity").then((res) => res.json()).then(setActivity).catch(() => setActivity([]));
+    let cancelled = false;
+
+    async function refresh() {
+      try {
+        const response = await fetch("/api/v2/admin/activity", { cache: "no-store" });
+        const payload = (await response.json()) as { activity?: Activity[] };
+        if (!cancelled) setActivity(payload.activity ?? []);
+      } catch {
+        if (!cancelled) setActivity([]);
+      }
+    }
+
+    refresh();
+    const interval = window.setInterval(refresh, 10000);
+    window.addEventListener("arc:data-refresh", refresh);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("arc:data-refresh", refresh);
+    };
   }, []);
 
   return (
@@ -31,7 +51,15 @@ export default function AdminActivityPage() {
               <span>{formatDate(item.timestamp)}</span>
               <span className="font-medium">{item.action}</span>
               <span>{item.summary}</span>
-              <span className="truncate text-[var(--muted)]">{item.hash ? formatAddress(item.hash, 10, 6) : formatAddress(item.operator)}</span>
+              <span className="truncate text-[var(--muted)]">
+                {item.txHash ? (
+                  <a href={`${ARC_TESTNET_EXPLORER_URL}/tx/${item.txHash}`} target="_blank" rel="noreferrer" className="hover:underline">
+                    {formatAddress(item.txHash, 10, 6)}
+                  </a>
+                ) : (
+                  formatAddress(item.operatorWallet ?? undefined)
+                )}
+              </span>
             </div>
           ))}
         </div>
