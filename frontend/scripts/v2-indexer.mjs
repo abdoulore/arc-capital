@@ -1,4 +1,9 @@
+import fs from "node:fs";
+import path from "node:path";
 import { createPublicClient, decodeEventLog, http, parseAbiItem } from "viem";
+
+loadEnvFile(path.resolve(process.cwd(), "..", ".env"));
+loadEnvFile(path.resolve(process.cwd(), ".env"));
 
 const ARC_TESTNET_CHAIN_ID = 5_042_002;
 const RPC_URL = process.env.ARC_TESTNET_RPC_URL ?? process.env.NEXT_PUBLIC_ARC_TESTNET_RPC_URL ?? "https://rpc.testnet.arc.network";
@@ -17,9 +22,9 @@ const arcTestnet = {
 };
 
 const configuredContracts = [
-  { source: "monthlyVault", address: process.env.NEXT_PUBLIC_VAULT_ADDRESS },
-  { source: "longTermVault", address: process.env.NEXT_PUBLIC_LONG_TERM_VAULT_ADDRESS },
-  { source: "marketplace", address: process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS },
+  { source: "monthlyVault", address: process.env.NEXT_PUBLIC_MONTHLY_VAULT_V2_ADDRESS ?? process.env.NEXT_PUBLIC_VAULT_ADDRESS },
+  { source: "longTermVault", address: process.env.NEXT_PUBLIC_LONG_TERM_VAULT_V2_ADDRESS ?? process.env.NEXT_PUBLIC_LONG_TERM_VAULT_ADDRESS },
+  { source: "marketplace", address: process.env.NEXT_PUBLIC_MARKETPLACE_V2_ADDRESS ?? process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS },
   { source: "sampleDeal", address: process.env.NEXT_PUBLIC_SAMPLE_DEAL_ADDRESS },
 ].filter((item) => isAddressLike(item.address));
 
@@ -130,6 +135,20 @@ function minBigInt(a, b) {
 
 function isAddressLike(value) {
   return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+function loadEnvFile(file) {
+  if (!fs.existsSync(file)) return;
+  const raw = fs.readFileSync(file, "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const index = trimmed.indexOf("=");
+    if (index === -1) continue;
+    const key = trimmed.slice(0, index).trim();
+    const value = trimmed.slice(index + 1).trim().replace(/^["']|["']$/g, "");
+    if (!process.env[key]) process.env[key] = value;
+  }
 }
 
 main().catch((error) => {
