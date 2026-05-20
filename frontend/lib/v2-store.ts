@@ -680,7 +680,7 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
   const timestamp = event.blockTimestamp ? new Date(event.blockTimestamp).toISOString() : new Date().toISOString();
   const eventName = event.eventName.toLowerCase();
   const wallet = stringValue(payload.user ?? payload.investor ?? payload.wallet ?? event.actorWallet)?.toLowerCase();
-  const amountUsdc = decimalString(payload.amountUsdc ?? payload.amount ?? payload.assets ?? payload.netAssets ?? payload.principal);
+  const amountUsdc = usdcValue(payload.amountUsdc, payload.amount ?? payload.assets ?? payload.netAssets ?? payload.principal);
   const shares = decimalString(payload.shares ?? payload.shareAmount ?? payload.value);
 
   if (wallet) {
@@ -728,13 +728,28 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
   }
 
   if ((eventName === "invested" || eventName === "dealinvested" || eventName === "dealinvestment") && wallet) {
-    const dealId = stringValue(payload.dealId);
+    const dealId = await findDealIdByVaultAddress(pool, event.contractAddress);
     await pool.query(
       `insert into v2_deal_investments (id, deal_id, investor_wallet, amount_usdc, shares, tx_hash, invested_at)
        values ($1, $2, $3, $4, $5, $6, $7)
        on conflict (tx_hash) do nothing`,
       [crypto.randomUUID(), dealId || null, wallet, amountUsdc, shares, event.txHash, timestamp],
     );
+    if (dealId) {
+      await pool.query(
+        `update v2_deals
+         set total_raised_usdc = total_raised_usdc + $2::numeric,
+             ownership_issued = ownership_issued + $3::numeric,
+             investor_count = (
+               select count(distinct investor_wallet)::int
+               from v2_deal_investments
+               where deal_id = $1
+             ),
+             updated_at = now()
+         where id = $1`,
+        [dealId, amountUsdc, shares],
+      );
+    }
   }
 
   if (eventName === "dealcreated") {
@@ -758,8 +773,8 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
         dealVault?.toLowerCase() ?? null,
         metadataId ? `Deal ${metadataId}` : `Deal #${dealId}`,
         metadataId ?? "Awaiting admin metadata",
-        decimalString(payload.amountUsdc ?? payload.targetRaise),
-        decimalString(payload.minRaise),
+        usdcValue(payload.amountUsdc, payload.targetRaise),
+        usdcValue(undefined, payload.minRaise),
         Number(payload.closeTime ?? 0),
         { onchainDealId: dealId, metadataId },
       ],
@@ -778,13 +793,111 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
         crypto.randomUUID(),
         wallet,
         stringValue(payload.positionId) ?? "0",
-        decimalString(payload.amountUsdc ?? payload.principal),
+        usdcValue(payload.amountUsdc, payload.principal),
         Number(payload.apyBps ?? 0),
         Number(payload.duration ?? 0),
         Number(payload.start ?? 0),
         Number(payload.maturity ?? 0),
         event.txHash,
       ],
+    );
+  }
+
+  if (eventName === "marketplacelistingcreated") {
+    const listingId = stringValue(payload.listingId) ?? "0";
+    const seller = stringValue(payload.seller)?.toLowerCase();
+    const token = stringValue(payload.token);
+    const dealId = token ? await findDealIdByVaultAddress(pool, token) : null;
+    if (seller) {
+      await pool.query(
+        `insert into v2_users (wallet, first_seen_at, last_seen_at)
+         values ($1, $2, $2)
+         on conflict (wallet) do update set last_seen_at = excluded.last_seen_at`,
+        [seller, timestamp],
+      );
+      await pool.query(
+        `insert into v2_marketplace_listings (
+           id, chain_id, onchain_listing_id, deal_id, seller_wallet,
+           shares_total, shares_remaining, price_per_share_usdc,
+           status, created_tx_hash, created_at
+         )
+         values ($1, $2, $3, $4, $5, $6, $6, $7, 'active', $8, $9)
+         on conflict (chain_id, onchain_listing_id) do update set
+           shares_remaining = excluded.shares_remaining,
+           price_per_share_usdc = excluded.price_per_share_usdc,
+           status = 'active'`,
+        [
+          crypto.randomUUID(),
+          event.chainId ?? ARC_TESTNET_CHAIN_ID,
+          listingId,
+          dealId,
+          seller,
+          sharesString(payload.amount),
+          usdcDecimalString(payload.pricePerShare),
+          event.txHash,
+          timestamp,
+        ],
+      );
+    }
+  }
+
+  if (eventName === "marketplacelistingfilled") {
+    const listingId = stringValue(payload.listingId) ?? "0";
+    const buyer = stringValue(payload.buyer)?.toLowerCase();
+    const seller = stringValue(payload.seller)?.toLowerCase();
+    const listing = await one<{ id: string }>(
+      pool,
+      `select id
+       from v2_marketplace_listings
+       where chain_id = $1 and onchain_listing_id = $2`,
+      [event.chainId ?? ARC_TESTNET_CHAIN_ID, listingId],
+    );
+    if (buyer && seller && listing) {
+      await pool.query(
+        `insert into v2_marketplace_trades (
+           id, listing_id, buyer_wallet, seller_wallet, shares,
+           total_price_usdc, tx_hash, traded_at
+         )
+         values ($1, $2, $3, $4, $5, $6, $7, $8)
+         on conflict (tx_hash) do nothing`,
+        [
+          crypto.randomUUID(),
+          listing.id,
+          buyer,
+          seller,
+          sharesString(payload.amount),
+          usdcDecimalString(payload.totalPrice),
+          event.txHash,
+          timestamp,
+        ],
+      );
+      await pool.query(
+        `update v2_marketplace_listings
+         set shares_remaining = $3::numeric,
+             status = case when $3::numeric <= 0 then 'filled' else status end
+         where chain_id = $1 and onchain_listing_id = $2`,
+        [event.chainId ?? ARC_TESTNET_CHAIN_ID, listingId, sharesString(payload.amountRemaining)],
+      );
+      for (const user of [buyer, seller]) {
+        await pool.query(
+          `insert into v2_users (wallet, first_seen_at, last_seen_at)
+           values ($1, $2, $2)
+           on conflict (wallet) do update set last_seen_at = excluded.last_seen_at`,
+          [user, timestamp],
+        );
+      }
+    }
+  }
+
+  if (eventName === "marketplacelistingcancelled") {
+    const listingId = stringValue(payload.listingId) ?? "0";
+    await pool.query(
+      `update v2_marketplace_listings
+       set status = 'cancelled',
+           shares_remaining = 0,
+           cancelled_at = $3
+       where chain_id = $1 and onchain_listing_id = $2`,
+      [event.chainId ?? ARC_TESTNET_CHAIN_ID, listingId, timestamp],
     );
   }
 }
@@ -838,8 +951,41 @@ function decimalString(value: unknown) {
   return "0";
 }
 
+function sharesString(value: unknown) {
+  return decimalString(value);
+}
+
+function usdcDecimalString(value: unknown) {
+  const raw = decimalString(value);
+  if (raw.includes(".")) return raw;
+  try {
+    const padded = raw.padStart(7, "0");
+    const whole = padded.slice(0, -6) || "0";
+    const fraction = padded.slice(-6);
+    return `${whole}.${fraction}`;
+  } catch {
+    return "0";
+  }
+}
+
+function usdcValue(preferred: unknown, fallback: unknown) {
+  const explicit = decimalString(preferred);
+  if (explicit !== "0") return explicit;
+  return usdcDecimalString(fallback);
+}
+
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+async function findDealIdByVaultAddress(pool: Pool, address?: string | null) {
+  if (!address) return null;
+  const deal = await one<{ id: string }>(
+    pool,
+    `select id from v2_deals where lower(deal_vault_address) = lower($1) limit 1`,
+    [address],
+  );
+  return deal?.id ?? null;
 }
 
 function needsSsl(connectionString: string) {

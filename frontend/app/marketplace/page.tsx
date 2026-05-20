@@ -5,7 +5,7 @@ import { Modal } from "@/components/modal";
 import { SectionHeader } from "@/components/section-header";
 import { StatusBadge } from "@/components/status-badge";
 import { WalletGatedButton } from "@/components/wallet-gated-button";
-import { DEAL_VAULT_ABI } from "@/app/constants";
+import { DEAL_VAULT_V2_ABI } from "@/app/constants";
 import { formatCurrency, formatNumber, formatTokenAmount } from "@/lib/utils";
 import { useMarketplace } from "@/hooks/useInvestmentContracts";
 import { useReadContract } from "wagmi";
@@ -21,12 +21,14 @@ type MarketplaceRow = {
 };
 
 type MarketplaceListing = {
-  id: number;
-  seller: string;
-  deal: string;
-  amountRemaining: string;
-  pricePerShare: string;
-  active: boolean;
+  id: string;
+  onchain_listing_id: string;
+  title: string | null;
+  seller_wallet: string;
+  shares_remaining: string;
+  price_per_share_usdc: string;
+  status: string;
+  created_at: string;
 };
 
 export default function MarketplacePage() {
@@ -42,11 +44,11 @@ export default function MarketplacePage() {
   const marketplace = useMarketplace();
   const dealHoldings = useLiveDealHoldings(deals, marketplace.address);
   const liveRows: MarketplaceRow[] = listings.map((listing) => {
-    const shares = BigInt(listing.amountRemaining);
-    const priceRaw = BigInt(listing.pricePerShare);
+    const shares = BigInt(Math.trunc(Number(listing.shares_remaining || 0)));
+    const priceRaw = BigInt(Math.round(Number(listing.price_per_share_usdc || 0) * 1_000_000));
     return {
-      id: listing.id,
-      deal: listing.deal,
+      id: Number(listing.onchain_listing_id),
+      deal: listing.title ?? `Listing #${listing.onchain_listing_id}`,
       side: "Sell",
       shares,
       priceRaw,
@@ -55,13 +57,14 @@ export default function MarketplacePage() {
     };
   });
   const yourRows = liveRows.filter((row) => {
-    const listing = listings.find((item) => item.id === row.id);
-    return listing?.seller?.toLowerCase() === marketplace.address?.toLowerCase();
+    const listing = listings.find((item) => Number(item.onchain_listing_id) === row.id);
+    return listing?.seller_wallet?.toLowerCase() === marketplace.address?.toLowerCase();
   });
   const totalCost = useMemo(() => Number(amount || 0) * (selectedListing?.price ?? 0), [amount, selectedListing]);
 
   async function refreshListings() {
-    fetch("/api/marketplace")
+    const params = marketplace.address ? `?wallet=${marketplace.address}` : "";
+    fetch(`/api/v2/marketplace${params}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data: { listings?: MarketplaceListing[] }) => setListings(data.listings ?? []))
       .catch(() => setListings([]));
@@ -71,15 +74,18 @@ export default function MarketplacePage() {
     refreshListings();
     const interval = window.setInterval(refreshListings, 10000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [marketplace.address]);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/admin/deals", { cache: "no-store" })
+    fetch("/api/v2/deals", { cache: "no-store" })
       .then((res) => res.json())
-      .then((payload: Array<{ title: string; contractAddress?: `0x${string}`; contractMissing?: boolean }>) => {
+      .then((payload: {
+        openDeals?: Array<{ title: string; contractAddress?: `0x${string}` | null }>;
+        closedDeals?: Array<{ title: string; contractAddress?: `0x${string}` | null }>;
+      }) => {
         if (!cancelled) {
-          setDeals(payload.filter((deal) => deal.contractAddress && !deal.contractMissing).map((deal) => ({ title: deal.title, contractAddress: deal.contractAddress! })));
+          setDeals([...(payload.openDeals ?? []), ...(payload.closedDeals ?? [])].filter((deal) => deal.contractAddress).map((deal) => ({ title: deal.title, contractAddress: deal.contractAddress! })));
         }
       })
       .catch(() => {
@@ -388,7 +394,7 @@ function useLiveDealHoldings(deals: Array<{ title: string; contractAddress: `0x$
 function useDealHolding(deal?: { title: string; contractAddress: `0x${string}` }, address?: `0x${string}`) {
   const { data: shares } = useReadContract({
     address: deal?.contractAddress,
-    abi: DEAL_VAULT_ABI,
+    abi: DEAL_VAULT_V2_ABI,
     functionName: "getShareBalance",
     args: address ? [address] : undefined,
     query: { enabled: Boolean(deal?.contractAddress && address), refetchInterval: 8000 },

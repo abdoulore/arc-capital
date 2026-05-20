@@ -5,10 +5,11 @@ import { Address, Hash, parseUnits } from "viem";
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useWriteContract } from "wagmi";
 import {
   DEAL_VAULT_ABI,
+  DEAL_VAULT_V2_ABI,
   LONG_TERM_VAULT_ABI,
   LONG_TERM_VAULT_ADDRESS,
-  MARKETPLACE_ABI,
-  MARKETPLACE_ADDRESS,
+  MARKETPLACE_V2_ABI,
+  MARKETPLACE_V2_ADDRESS,
   SAMPLE_DEAL_ADDRESS,
   USDC_ABI,
   USDC_ADDRESS,
@@ -672,8 +673,8 @@ export function useMarketplace() {
   const [transaction, setTransaction] = useState<TransactionState>({ label: "", status: "idle" });
 
   const listing = useReadContract({
-    address: MARKETPLACE_ADDRESS,
-    abi: MARKETPLACE_ABI,
+    address: MARKETPLACE_V2_ADDRESS,
+    abi: MARKETPLACE_V2_ABI,
     functionName: "listings",
     args: [BigInt(0)],
     query: { refetchInterval: 10000 },
@@ -697,14 +698,14 @@ export function useMarketplace() {
         () =>
           writeContractAsync({
             address: dealAddress,
-            abi: DEAL_VAULT_ABI,
+            abi: DEAL_VAULT_V2_ABI,
             functionName: "setApprovalForAll",
-            args: [MARKETPLACE_ADDRESS, true],
+            args: [MARKETPLACE_V2_ADDRESS, true],
           }),
         () =>
           writeContractAsync({
-            address: MARKETPLACE_ADDRESS,
-            abi: MARKETPLACE_ABI,
+            address: MARKETPLACE_V2_ADDRESS,
+            abi: MARKETPLACE_V2_ABI,
             functionName: "createListing",
             args: [dealAddress, BigInt(0), parsedAmount, parsedPrice],
           }),
@@ -742,12 +743,12 @@ export function useMarketplace() {
             address: USDC_ADDRESS,
             abi: USDC_ABI,
             functionName: "approve",
-            args: [MARKETPLACE_ADDRESS, price * parsedAmount],
+            args: [MARKETPLACE_V2_ADDRESS, price * parsedAmount],
           }),
         () =>
           writeContractAsync({
-            address: MARKETPLACE_ADDRESS,
-            abi: MARKETPLACE_ABI,
+            address: MARKETPLACE_V2_ADDRESS,
+            abi: MARKETPLACE_V2_ABI,
             functionName: "fillListing",
             args: [listingId, parsedAmount],
           }),
@@ -777,8 +778,8 @@ export function useMarketplace() {
       steps: [
         () =>
           writeContractAsync({
-            address: MARKETPLACE_ADDRESS,
-            abi: MARKETPLACE_ABI,
+            address: MARKETPLACE_V2_ADDRESS,
+            abi: MARKETPLACE_V2_ABI,
             functionName: "cancelListing",
             args: [listingId],
           }),
