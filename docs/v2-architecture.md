@@ -30,6 +30,8 @@ flowchart TD
 
 ## V2 Modules
 
+The canonical V2 contract event surface is defined in `docs/v2-contract-event-spec.md`. Solidity changes should follow that file so the indexer does not need contract-specific guesswork.
+
 ### Monthly Vault
 
 The Monthly Vault handles flexible RWA exposure with monthly liquidity windows.
