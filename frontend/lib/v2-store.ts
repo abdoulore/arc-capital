@@ -151,14 +151,16 @@ export async function getV2Portfolio(wallet?: string | null) {
     ),
     many<{
       id: string;
+      onchain_position_id: string | null;
       principal_usdc: string;
       apy_bps: number;
+      duration_seconds: number;
       maturity_at: Date;
       claimable_yield_usdc: string;
       redeemed_at: Date | null;
     }>(
       pool,
-      `select id, principal_usdc, apy_bps, maturity_at, claimable_yield_usdc, redeemed_at
+      `select id, onchain_position_id, principal_usdc, apy_bps, duration_seconds, maturity_at, claimable_yield_usdc, redeemed_at
        from v2_fixed_income_positions
        where wallet = $1
        order by maturity_at asc`,
@@ -166,18 +168,19 @@ export async function getV2Portfolio(wallet?: string | null) {
     ),
     many<{
       deal_id: string;
+      deal_vault_address: string | null;
       title: string;
       shares: string;
       value_usdc: string;
       claimable_yield_usdc: string;
     }>(
       pool,
-      `select d.id as deal_id, d.title, sum(i.shares)::text as shares,
+      `select d.id as deal_id, d.deal_vault_address, d.title, sum(i.shares)::text as shares,
               sum(i.amount_usdc)::text as value_usdc, '0'::text as claimable_yield_usdc
        from v2_deal_investments i
        join v2_deals d on d.id = i.deal_id
        where i.investor_wallet = $1
-       group by d.id, d.title
+       group by d.id, d.deal_vault_address, d.title
        order by d.title asc`,
       [normalized],
     ),
@@ -196,14 +199,17 @@ export async function getV2Portfolio(wallet?: string | null) {
       : null,
     fixedIncomePositions: fixedPositions.map((position) => ({
       id: position.id,
+      onchainPositionId: position.onchain_position_id,
       principalUsdc: position.principal_usdc,
       apyBps: position.apy_bps,
+      durationSeconds: position.duration_seconds,
       maturityAt: position.maturity_at.toISOString(),
       claimableYieldUsdc: position.claimable_yield_usdc,
       status: position.redeemed_at ? "redeemed" : "active",
     })),
     dealHoldings: dealHoldings.map((holding) => ({
       dealId: holding.deal_id,
+      dealVaultAddress: holding.deal_vault_address,
       title: holding.title,
       shares: holding.shares,
       currentValueUsdc: holding.value_usdc,

@@ -1,39 +1,67 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAccount } from "wagmi";
 import { SectionHeader } from "@/components/section-header";
 import { StatusBadge } from "@/components/status-badge";
 import { WalletGatedButton } from "@/components/wallet-gated-button";
-import { DEAL_VAULT_ABI, LONG_TERM_VAULT_ABI, LONG_TERM_VAULT_ADDRESS, USDC_ABI, USDC_ADDRESS, VAULT_ABI, VAULT_ADDRESS } from "@/app/constants";
-import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDealVault, useLongTermVault } from "@/hooks/useInvestmentContracts";
 import { ARC_TESTNET_EXPLORER_URL } from "@/lib/network";
 import { formatDate, formatNumber, formatPercent, formatTokenAmount } from "@/lib/utils";
-import { useEffect, useMemo, useState } from "react";
-import { useAccount, useReadContract } from "wagmi";
+
+type V2Portfolio = {
+  status: "live" | "pending";
+  monthlyVault: null | {
+    shares: string;
+    currentValueUsdc: string;
+    claimableYieldUsdc: string;
+    updatedAt: string;
+  };
+  fixedIncomePositions: Array<{
+    id: string;
+    onchainPositionId?: string | null;
+    principalUsdc: string;
+    apyBps: number;
+    durationSeconds?: number;
+    maturityAt: string;
+    claimableYieldUsdc: string;
+    status: string;
+  }>;
+  dealHoldings: Array<{
+    dealId: string;
+    dealVaultAddress?: `0x${string}` | null;
+    title: string;
+    shares: string;
+    currentValueUsdc: string;
+    claimableYieldUsdc: string;
+  }>;
+  activity: Array<{
+    id: string;
+    action: string;
+    valueUsdc?: string;
+    shares?: string;
+    txHash?: string;
+    timestamp?: string;
+    source: "indexed" | "pending";
+  }>;
+};
+
+const EMPTY_PORTFOLIO: V2Portfolio = {
+  status: "pending",
+  monthlyVault: null,
+  fixedIncomePositions: [],
+  dealHoldings: [],
+  activity: [],
+};
 
 export default function PortfolioPage() {
   const router = useRouter();
-  const portfolio = useDashboardData();
   const { address, isConnected, status } = useAccount();
-  const longTerm = useLongTermVault();
-  const [earlyExitPosition, setEarlyExitPosition] = useState<FixedPositionRowData | null>(null);
   const [mounted, setMounted] = useState(false);
-  const connected = portfolio.isConnected;
-  const liveWallet = useLiveWalletValue(address);
-  const liveMonthly = useLiveMonthlyValue(address);
-  const liveFixed = useLiveFixedPositions(address);
-  const liveDeals = useLiveDealPositions(address);
-  const walletLiquidity = liveWallet ?? portfolio.walletLiquidity;
-  const monthlyValue = liveMonthly.value ?? portfolio.monthlyValue;
-  const fixedPrincipal = liveFixed.hasLiveData ? liveFixed.principal : portfolio.fixedPrincipal;
-  const fixedYield = liveFixed.hasLiveData ? liveFixed.yield : portfolio.fixedYield;
-  const dealValue = liveDeals.hasLiveData ? liveDeals.value : portfolio.dealValue;
-  const dealYield = liveDeals.hasLiveData ? liveDeals.yield : portfolio.dealYield;
-  const totalValue = walletLiquidity + monthlyValue + fixedPrincipal + fixedYield + dealValue + dealYield;
-  const totalYield = fixedYield + dealYield;
-  const fixedRows = liveFixed.hasLiveData ? liveFixed.positions : portfolio.fixedPositions ?? [];
-  const dealRows = liveDeals.hasLiveData ? liveDeals.holdings : portfolio.dealHoldings ?? [];
+  const [portfolio, setPortfolio] = useState<V2Portfolio>(EMPTY_PORTFOLIO);
+  const [earlyExitPosition, setEarlyExitPosition] = useState<V2Portfolio["fixedIncomePositions"][number] | null>(null);
+  const longTerm = useLongTermVault();
 
   useEffect(() => {
     setMounted(true);
@@ -44,74 +72,92 @@ export default function PortfolioPage() {
     if (!isConnected) router.replace("/vaults");
   }, [isConnected, mounted, router, status]);
 
-  if (!mounted || status === "connecting" || status === "reconnecting" || !isConnected) {
-    return null;
-  }
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+
+    async function loadPortfolio() {
+      try {
+        const response = await fetch(`/api/v2/portfolio?wallet=${address}`, { cache: "no-store" });
+        const next = (await response.json()) as V2Portfolio;
+        if (!cancelled) setPortfolio(next);
+      } catch {
+        if (!cancelled) setPortfolio(EMPTY_PORTFOLIO);
+      }
+    }
+
+    loadPortfolio();
+    const interval = window.setInterval(loadPortfolio, 10000);
+    window.addEventListener("arc:data-refresh", loadPortfolio);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("arc:data-refresh", loadPortfolio);
+    };
+  }, [address]);
+
+  const totals = useMemo(() => {
+    const monthly = decimalUsdcToRaw(portfolio.monthlyVault?.currentValueUsdc);
+    const fixed = portfolio.fixedIncomePositions.reduce((total, position) => total + decimalUsdcToRaw(position.principalUsdc), BigInt(0));
+    const fixedYield = portfolio.fixedIncomePositions.reduce((total, position) => total + decimalUsdcToRaw(position.claimableYieldUsdc), BigInt(0));
+    const deals = portfolio.dealHoldings.reduce((total, holding) => total + decimalUsdcToRaw(holding.currentValueUsdc), BigInt(0));
+    const dealYield = portfolio.dealHoldings.reduce((total, holding) => total + decimalUsdcToRaw(holding.claimableYieldUsdc), BigInt(0));
+    return {
+      monthly,
+      fixed,
+      fixedYield,
+      deals,
+      dealYield,
+      total: monthly + fixed + fixedYield + deals + dealYield,
+      yield: fixedYield + dealYield,
+    };
+  }, [portfolio]);
+
+  if (!mounted || status === "connecting" || status === "reconnecting" || !isConnected) return null;
 
   return (
     <div>
       <SectionHeader
         eyebrow="Portfolio"
         title="Positions and liquidity"
-        description="Holdings, maturities, claimable yield, and wallet-confirmed activity for the connected account."
+        description="Holdings, maturities, claimable yield, and indexed activity for the connected account."
       />
 
-      {!connected ? (
-        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
-          <p className="font-semibold">Connect Wallet</p>
-          <p className="mt-1 text-blue-800 dark:text-blue-200">
-            Vault balances, deal holdings, claimable yield, and transaction history are wallet-specific.
-          </p>
-        </div>
-      ) : null}
-
       <section className="grid gap-3 md:grid-cols-3">
-        <PortfolioMetric
-          label="Total value"
-          value={connected ? formatTokenAmount(totalValue, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail="Cash plus live positions"
-        />
-        <PortfolioMetric
-          label="Wallet liquidity"
-          value={connected ? formatTokenAmount(walletLiquidity, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail="USDC currently in wallet"
-        />
-        <PortfolioMetric
-          label="Claimable yield"
-          value={connected ? formatTokenAmount(totalYield, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail="Claimable fixed-income and deal revenue"
-        />
+        <PortfolioMetric label="Total value" value={formatTokenAmount(totals.total, 6, "USDC", 2)} detail="Cash plus indexed positions" />
+        <PortfolioMetric label="Invested capital" value={formatTokenAmount(totals.monthly + totals.fixed + totals.deals, 6, "USDC", 2)} detail="Monthly vault, fixed income, and private deal capital" />
+        <PortfolioMetric label="Claimable yield" value={formatTokenAmount(totals.yield, 6, "USDC", 2)} detail="Claimable fixed-income and deal revenue" />
       </section>
 
       <section className="mt-5 grid gap-3 lg:grid-cols-3">
         <PositionPanel
           title="Monthly Vault"
           status="Semi-liquid"
-          value={connected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Awaiting Live Data"}
+          value={formatTokenAmount(totals.monthly, 6, "USDC", 2)}
           detail="Monthly liquidity with wallet settlement. Vault shares are used for accounting."
           rows={[
-            ["Liquidity", "Monthly window"],
-            ["Current value", connected ? formatTokenAmount(monthlyValue, 6, "USDC", 2) : "Awaiting Live Data"],
+            ["Shares", formatDecimal(portfolio.monthlyVault?.shares, 4)],
+            ["Claimable yield", formatTokenAmount(decimalUsdcToRaw(portfolio.monthlyVault?.claimableYieldUsdc), 6, "USDC", 2)],
           ]}
         />
         <PositionPanel
           title="Long-Term Fixed Income"
           status="Locked"
-          value={connected ? formatTokenAmount(fixedPrincipal, 6, "USDC", 2) : "Awaiting Live Data"}
+          value={formatTokenAmount(totals.fixed, 6, "USDC", 2)}
           detail="Principal locked by maturity bucket. Yield claims are separate from principal redemption."
           rows={[
-            ["Active positions", String(fixedRows.length)],
-            ["Claimable yield", connected ? formatTokenAmount(fixedYield, 6, "USDC", 2) : "Awaiting Live Data"],
+            ["Active positions", String(portfolio.fixedIncomePositions.filter((position) => position.status === "active").length)],
+            ["Claimable yield", formatTokenAmount(totals.fixedYield, 6, "USDC", 2)],
           ]}
         />
         <PositionPanel
           title="Private Deal Holdings"
           status="Tradable"
-          value={connected ? formatTokenAmount(dealValue, 6, "USDC", 2) : "Awaiting Live Data"}
-          detail="Private deal positions with yield rights that transfer through marketplace trades. Ownership shares track your position."
+          value={formatTokenAmount(totals.deals, 6, "USDC", 2)}
+          detail="Private deal positions with yield rights that transfer through marketplace trades."
           rows={[
-            ["Active holdings", String(dealRows.length)],
-            ["Claimable yield", connected ? formatTokenAmount(dealYield, 6, "USDC", 2) : "Awaiting Live Data"],
+            ["Active holdings", String(portfolio.dealHoldings.length)],
+            ["Claimable yield", formatTokenAmount(totals.dealYield, 6, "USDC", 2)],
           ]}
         />
       </section>
@@ -124,7 +170,6 @@ export default function PortfolioPage() {
           </div>
           <StatusBadge label="Fixed APY" />
         </div>
-        {connected ? (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-[var(--line)] text-[var(--muted)]">
@@ -138,14 +183,13 @@ export default function PortfolioPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
-              {connected && fixedRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No fixed-income positions.</td></tr> : null}
-              {fixedRows.map((position) => <FixedPositionRow key={position.id} position={position} longTerm={longTerm} onEarlyExit={setEarlyExitPosition} />)}
+              {portfolio.fixedIncomePositions.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No fixed-income positions.</td></tr> : null}
+              {portfolio.fixedIncomePositions.map((position) => (
+                <FixedPositionRow key={position.id} position={position} longTerm={longTerm} onEarlyExit={setEarlyExitPosition} />
+              ))}
             </tbody>
           </table>
         </div>
-        ) : (
-          <p className="py-6 text-sm text-[var(--muted)]">Awaiting Live Data</p>
-        )}
       </section>
 
       <section className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
@@ -156,35 +200,29 @@ export default function PortfolioPage() {
           </div>
           <StatusBadge label="Deal Shares" />
         </div>
-        {connected ? (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-[var(--line)] text-[var(--muted)]">
               <tr>
                 <th className="py-3 font-medium">Deal</th>
                 <th className="py-3 font-medium">Shares</th>
-                <th className="py-3 font-medium">Price / share</th>
                 <th className="py-3 font-medium">Current value</th>
                 <th className="py-3 font-medium">Claimable yield</th>
                 <th className="py-3 font-medium">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
-              {connected && dealRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No deal holdings.</td></tr> : null}
-              {dealRows.map((holding) => <DealHoldingRow key={holding.contractAddress} holding={holding} />)}
+              {portfolio.dealHoldings.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={5}>No deal holdings.</td></tr> : null}
+              {portfolio.dealHoldings.map((holding) => <DealHoldingRow key={holding.dealId} holding={holding} />)}
             </tbody>
           </table>
         </div>
-        ) : (
-          <p className="py-6 text-sm text-[var(--muted)]">Awaiting Live Data</p>
-        )}
       </section>
 
       <section className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
         <h2 className="font-semibold">Transaction history</h2>
-        {!connected ? <p className="py-6 text-sm text-[var(--muted)]">Awaiting Live Data</p> : null}
-        {connected && portfolio.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
-        {connected && portfolio.activity.length > 0 ? (
+        {portfolio.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
+        {portfolio.activity.length > 0 ? (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="border-b border-[var(--line)] text-[var(--muted)]">
@@ -198,16 +236,13 @@ export default function PortfolioPage() {
               <tbody className="divide-y divide-[var(--line)]">
                 {portfolio.activity.map((item) => (
                   <tr key={item.id}>
-                    <td className="py-3">
-                      <p className="font-medium">{item.action}</p>
-                      {item.detail && !item.detail.toLowerCase().includes("wallet-confirmed transaction") ? <p className="mt-1 text-xs text-[var(--muted)]">{item.detail}</p> : null}
-                    </td>
-                    <td className="py-3 font-medium">{formatActivitySummary(item)}</td>
+                    <td className="py-3 font-medium">{item.action}</td>
+                    <td className="py-3 font-medium">{formatIndexedActivityValue(item)}</td>
                     <td className="py-3 text-[var(--muted)]">{formatDate(item.timestamp)}</td>
                     <td className="py-3 text-right">
-                      {item.hash ? (
+                      {item.txHash ? (
                         <a
-                          href={`${ARC_TESTNET_EXPLORER_URL}/tx/${item.hash}`}
+                          href={`${ARC_TESTNET_EXPLORER_URL}/tx/${item.txHash}`}
                           target="_blank"
                           rel="noreferrer"
                           className="font-mono text-xs text-blue-600 hover:underline dark:text-blue-400"
@@ -225,13 +260,16 @@ export default function PortfolioPage() {
           </div>
         ) : null}
       </section>
+
       {earlyExitPosition ? (
         <EarlyExitModal
           position={earlyExitPosition}
           busy={longTerm.transaction.status === "pending"}
           onCancel={() => setEarlyExitPosition(null)}
           onConfirm={async () => {
-            const ok = await longTerm.earlyExit(BigInt(earlyExitPosition.id));
+            const positionId = earlyExitPosition.onchainPositionId;
+            if (!positionId) return;
+            const ok = await longTerm.earlyExit(BigInt(positionId));
             if (ok) setEarlyExitPosition(null);
           }}
         />
@@ -240,45 +278,42 @@ export default function PortfolioPage() {
   );
 }
 
-type FixedPositionRowData = { id: string; principal: string; claimableYield: string; maturity: string; apyBps: string; duration: string };
-
 function FixedPositionRow({
   position,
   longTerm,
   onEarlyExit,
 }: {
-  position: FixedPositionRowData;
+  position: V2Portfolio["fixedIncomePositions"][number];
   longTerm: ReturnType<typeof useLongTermVault>;
-  onEarlyExit: (position: FixedPositionRowData) => void;
+  onEarlyExit: (position: V2Portfolio["fixedIncomePositions"][number]) => void;
 }) {
-  const claimableYield = toBigInt(position.claimableYield);
-  const principal = toBigInt(position.principal);
-  const maturitySeconds = toBigInt(position.maturity);
-  const isMature = maturitySeconds > BigInt(0) && maturitySeconds <= BigInt(Math.floor(Date.now() / 1000));
-  const maturity = formatDate(BigInt(position.maturity));
+  const positionId = position.onchainPositionId;
+  const principal = decimalUsdcToRaw(position.principalUsdc);
+  const claimableYield = decimalUsdcToRaw(position.claimableYieldUsdc);
+  const isMature = new Date(position.maturityAt).getTime() <= Date.now();
   const transactionPending = longTerm.transaction.status === "pending";
 
   return (
     <tr>
-      <td className="py-4 font-medium">{formatLockDuration(position.duration)}</td>
+      <td className="py-4 font-medium">{formatLockDuration(position.durationSeconds)}</td>
       <td className="py-4">{formatTokenAmount(principal, 6, "USDC", 2)}</td>
-      <td className="py-4">{formatPercent(Number(position.apyBps) / 100)}</td>
-      <td className="py-4">{maturity}</td>
+      <td className="py-4">{formatPercent(position.apyBps / 100)}</td>
+      <td className="py-4">{formatDate(position.maturityAt)}</td>
       <td className="py-4">{formatTokenAmount(claimableYield, 6, "USDC", 2)}</td>
       <td className="py-4">
         <div className="flex flex-wrap items-center gap-2">
-          {claimableYield > BigInt(0) ? (
+          {claimableYield > BigInt(0) && positionId ? (
             <WalletGatedButton
-              onClick={() => longTerm.claimYield(BigInt(position.id))}
+              onClick={() => longTerm.claimYield(BigInt(positionId))}
               disabled={transactionPending}
               className="rounded-md border border-[var(--line)] px-3 py-2 font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-slate-900"
             >
               {transactionPending ? "Working..." : "Claim"}
             </WalletGatedButton>
           ) : null}
-          {isMature ? (
+          {isMature && positionId ? (
             <WalletGatedButton
-              onClick={() => longTerm.redeemAtMaturity(BigInt(position.id))}
+              onClick={() => longTerm.redeemAtMaturity(BigInt(positionId))}
               disabled={transactionPending}
               className="rounded-md bg-blue-600 px-3 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -287,7 +322,7 @@ function FixedPositionRow({
           ) : (
             <WalletGatedButton
               onClick={() => onEarlyExit(position)}
-              disabled={transactionPending || principal === BigInt(0)}
+              disabled={transactionPending || !positionId || principal === BigInt(0)}
               className="rounded-md border border-amber-300 px-3 py-2 font-medium text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/30"
             >
               {transactionPending ? "Working..." : "Early exit"}
@@ -299,84 +334,18 @@ function FixedPositionRow({
   );
 }
 
-function EarlyExitModal({
-  position,
-  busy,
-  onCancel,
-  onConfirm,
-}: {
-  position: FixedPositionRowData;
-  busy: boolean;
-  onCancel: () => void;
-  onConfirm: () => Promise<void>;
-}) {
-  const principal = toBigInt(position.principal);
-  const returnedPrincipal = (principal * BigInt(9000)) / BigInt(10000);
-  const penalty = principal - returnedPrincipal;
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[var(--panel)] p-6 shadow-2xl">
-        <p className="text-sm font-semibold uppercase text-amber-300">Fixed-income early exit</p>
-        <h2 className="mt-2 text-2xl font-semibold">Confirm early exit</h2>
-        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-          Early exit permanently closes this fixed-income position and returns principal after penalty. Unclaimed yield is not included in this exit flow.
-        </p>
-        <div className="mt-5 rounded-xl border border-[var(--line)] bg-[var(--background)] p-4 text-sm">
-          <PreviewRow label="Principal" value={formatTokenAmount(principal, 6, "USDC", 2)} />
-          <PreviewRow label="Returned to wallet" value={formatTokenAmount(returnedPrincipal, 6, "USDC", 2)} />
-          <PreviewRow label="Penalty" value={formatTokenAmount(penalty, 6, "USDC", 2)} tone="warning" />
-          <PreviewRow label="Maturity" value={formatDate(BigInt(position.maturity))} />
-        </div>
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={busy}
-            className="rounded-md border border-[var(--line)] px-4 py-2 text-sm font-semibold hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void onConfirm()}
-            disabled={busy}
-            className="rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {busy ? "Confirming..." : "Confirm early exit"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PreviewRow({ label, value, tone }: { label: string; value: string; tone?: "warning" }) {
-  return (
-    <div className="flex justify-between gap-4 py-2">
-      <span className="text-[var(--muted)]">{label}</span>
-      <span className={tone === "warning" ? "font-semibold text-amber-300" : "font-semibold"}>{value}</span>
-    </div>
-  );
-}
-
-function DealHoldingRow({
-  holding,
-}: {
-  holding: { title: string; contractAddress: `0x${string}`; shares: string; pricePerShare: string; value: string; pendingYield?: string };
-}) {
-  const dealVault = useDealVault(holding.contractAddress);
-  const pendingYield = toBigInt(holding.pendingYield ?? "0");
+function DealHoldingRow({ holding }: { holding: V2Portfolio["dealHoldings"][number] }) {
+  const dealVault = useDealVault(holding.dealVaultAddress ?? undefined);
+  const pendingYield = decimalUsdcToRaw(holding.claimableYieldUsdc);
 
   return (
     <tr>
       <td className="py-4 font-medium">{holding.title}</td>
-      <td className="py-4">{formatNumber(Number(holding.shares), 0)}</td>
-      <td className="py-4">{formatTokenAmount(toBigInt(holding.pricePerShare), 6, "USDC", 2)}</td>
-      <td className="py-4">{formatTokenAmount(toBigInt(holding.value), 6, "USDC", 2)}</td>
+      <td className="py-4">{formatDecimal(holding.shares, 0)}</td>
+      <td className="py-4">{formatTokenAmount(decimalUsdcToRaw(holding.currentValueUsdc), 6, "USDC", 2)}</td>
       <td className="py-4">{formatTokenAmount(pendingYield, 6, "USDC", 2)}</td>
       <td className="py-4">
-        {pendingYield > BigInt(0) ? (
+        {pendingYield > BigInt(0) && holding.dealVaultAddress ? (
           <WalletGatedButton
             onClick={() => dealVault.claimYield()}
             disabled={dealVault.transaction.status === "pending"}
@@ -392,18 +361,54 @@ function DealHoldingRow({
   );
 }
 
+function EarlyExitModal({
+  position,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  position: V2Portfolio["fixedIncomePositions"][number];
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const principal = decimalUsdcToRaw(position.principalUsdc);
+  const returnedPrincipal = (principal * BigInt(9000)) / BigInt(10000);
+  const penalty = principal - returnedPrincipal;
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[var(--panel)] p-6 shadow-2xl">
+        <p className="text-sm font-semibold uppercase text-amber-300">Fixed-income early exit</p>
+        <h2 className="mt-2 text-2xl font-semibold">Confirm early exit</h2>
+        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+          Early exit permanently closes this fixed-income position and returns principal after penalty.
+        </p>
+        <div className="mt-5 rounded-xl border border-[var(--line)] bg-[var(--background)] p-4 text-sm">
+          <PreviewRow label="Principal" value={formatTokenAmount(principal, 6, "USDC", 2)} />
+          <PreviewRow label="Returned to wallet" value={formatTokenAmount(returnedPrincipal, 6, "USDC", 2)} />
+          <PreviewRow label="Penalty" value={formatTokenAmount(penalty, 6, "USDC", 2)} tone="warning" />
+          <PreviewRow label="Maturity" value={formatDate(position.maturityAt)} />
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" onClick={onCancel} disabled={busy} className="rounded-md border border-[var(--line)] px-4 py-2 text-sm font-semibold hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60">
+            Cancel
+          </button>
+          <button type="button" onClick={() => void onConfirm()} disabled={busy} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60">
+            {busy ? "Confirming..." : "Confirm early exit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PortfolioMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 shadow-sm">
       <div className="flex items-center gap-2">
         <p className="text-xs font-medium uppercase text-[var(--muted)]">{label}</p>
-        <span
-          title={detail}
-          aria-label={detail}
-          className="grid h-4 w-4 place-items-center rounded-full border border-[var(--line)] text-[10px] font-semibold text-[var(--muted)]"
-        >
-          i
-        </span>
+        <span title={detail} aria-label={detail} className="grid h-4 w-4 place-items-center rounded-full border border-[var(--line)] text-[10px] font-semibold text-[var(--muted)]">i</span>
       </div>
       <p className="mt-2 text-xl font-semibold">{value}</p>
     </div>
@@ -416,13 +421,7 @@ function PositionPanel({ title, status, value, detail, rows }: { title: string; 
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">{title}</h3>
-          <span
-            title={detail}
-            aria-label={detail}
-            className="grid h-4 w-4 place-items-center rounded-full border border-[var(--line)] text-[10px] font-semibold text-[var(--muted)]"
-          >
-            i
-          </span>
+          <span title={detail} aria-label={detail} className="grid h-4 w-4 place-items-center rounded-full border border-[var(--line)] text-[10px] font-semibold text-[var(--muted)]">i</span>
         </div>
         <StatusBadge label={status} />
       </div>
@@ -439,181 +438,45 @@ function PositionPanel({ title, status, value, detail, rows }: { title: string; 
   );
 }
 
-type ActivityItem = ReturnType<typeof useDashboardData>["activity"][number];
-
-function formatActivitySummary(item: ActivityItem) {
-  const primary = formatActivityAmount(item.amount, item.amountUnit);
-  const secondary = item.secondaryAmount ? ` ${item.secondaryLabel ?? "for"} ${formatActivityAmount(item.secondaryAmount, item.secondaryUnit)}` : "";
-  const label = item.amountLabel ? ` ${item.amountLabel}` : "";
-  return `${primary}${label} ${item.verb}${secondary}`;
+function PreviewRow({ label, value, tone }: { label: string; value: string; tone?: "warning" }) {
+  return (
+    <div className="flex justify-between gap-4 py-2">
+      <span className="text-[var(--muted)]">{label}</span>
+      <span className={tone === "warning" ? "font-semibold text-amber-300" : "font-semibold"}>{value}</span>
+    </div>
+  );
 }
 
-function formatLockDuration(duration: string) {
-  const days = Number(toBigInt(duration)) / 86_400;
+function formatIndexedActivityValue(item: V2Portfolio["activity"][number]) {
+  const value = decimalUsdcToRaw(item.valueUsdc);
+  if (value > BigInt(0)) return `${formatTokenAmount(value, 6, "USDC", 2)}${item.shares && Number(item.shares) > 0 ? ` for ${formatDecimal(item.shares, 0)} shares` : ""}`;
+  if (item.shares && Number(item.shares) > 0) return `${formatDecimal(item.shares, 0)} shares`;
+  return "Value pending";
+}
+
+function formatLockDuration(durationSeconds?: number) {
+  if (!durationSeconds) return "Fixed term";
+  const days = durationSeconds / 86_400;
   if (days >= 1090) return "3 years";
   if (days >= 725) return "2 years";
   if (days >= 360) return "1 year";
   return "Fixed term";
 }
 
-function formatActivityAmount(value = "0", unit: ActivityItem["amountUnit"]) {
-  const amount = toBigInt(value);
-  if (unit === "shares") return `${formatNumber(Number(amount), 0)} shares`;
-  return formatTokenAmount(amount, 6, "USDC", 2);
-}
-
-function toBigInt(value: string) {
+function decimalUsdcToRaw(value?: string | null) {
+  if (!value) return BigInt(0);
+  const [wholeRaw, fractionRaw = ""] = value.split(".");
+  const whole = wholeRaw.replace(/[^\d-]/g, "") || "0";
+  const fraction = fractionRaw.replace(/\D/g, "").padEnd(6, "0").slice(0, 6);
   try {
-    return BigInt(value);
+    return BigInt(whole) * BigInt(1_000_000) + BigInt(fraction || "0");
   } catch {
     return BigInt(0);
   }
 }
 
-function useLiveWalletValue(address?: `0x${string}`) {
-  const { data } = useReadContract({
-    address: USDC_ADDRESS,
-    abi: USDC_ABI,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    query: { enabled: Boolean(address), refetchInterval: 8000 },
-  });
-  return typeof data === "bigint" ? data : undefined;
-}
-
-function useLiveMonthlyValue(address?: `0x${string}`) {
-  const { data: shares } = useReadContract({
-    address: VAULT_ADDRESS,
-    abi: VAULT_ABI,
-    functionName: "shares",
-    args: address ? [address] : undefined,
-    query: { enabled: Boolean(address), refetchInterval: 8000 },
-  });
-  const { data: pricePerShare } = useReadContract({
-    address: VAULT_ADDRESS,
-    abi: VAULT_ABI,
-    functionName: "pricePerShare",
-    query: { refetchInterval: 8000 },
-  });
-  return {
-    value: typeof shares === "bigint" && typeof pricePerShare === "bigint"
-      ? (shares * pricePerShare) / BigInt(10 ** 18)
-      : undefined,
-  };
-}
-
-function useLiveFixedPositions(address?: `0x${string}`) {
-  const { data: positionIds } = useReadContract({
-    address: LONG_TERM_VAULT_ADDRESS,
-    abi: LONG_TERM_VAULT_ABI,
-    functionName: "getUserPositions",
-    args: address ? [address] : undefined,
-    query: { enabled: Boolean(address), refetchInterval: 8000 },
-  });
-  const ids = Array.isArray(positionIds) ? positionIds : [];
-  const reads = [useFixedPosition(ids[0]), useFixedPosition(ids[1]), useFixedPosition(ids[2])].filter((position) => position.id);
-  const positions = reads.filter((position) => !position.redeemed).map((position) => ({
-    id: position.id!,
-    principal: position.principal.toString(),
-    claimableYield: position.claimableYield.toString(),
-    maturity: position.maturity.toString(),
-    apyBps: position.apyBps.toString(),
-    duration: position.duration.toString(),
-  }));
-
-  return {
-    hasLiveData: Array.isArray(positionIds),
-    positions,
-    principal: reads.filter((position) => !position.redeemed).reduce((total, position) => total + position.principal, BigInt(0)),
-    yield: reads.filter((position) => !position.redeemed).reduce((total, position) => total + position.claimableYield, BigInt(0)),
-  };
-}
-
-function useFixedPosition(positionId?: bigint) {
-  const { data: position } = useReadContract({
-    address: LONG_TERM_VAULT_ADDRESS,
-    abi: LONG_TERM_VAULT_ABI,
-    functionName: "positions",
-    args: positionId !== undefined ? [positionId] : undefined,
-    query: { enabled: positionId !== undefined, refetchInterval: 8000 },
-  });
-  const { data: claimableYield } = useReadContract({
-    address: LONG_TERM_VAULT_ADDRESS,
-    abi: LONG_TERM_VAULT_ABI,
-    functionName: "claimableYield",
-    args: positionId !== undefined ? [positionId] : undefined,
-    query: { enabled: positionId !== undefined, refetchInterval: 8000 },
-  });
-  return {
-    id: positionId?.toString(),
-    principal: Array.isArray(position) && typeof position[1] === "bigint" ? position[1] : BigInt(0),
-    duration: Array.isArray(position) && typeof position[2] === "bigint" ? position[2] : BigInt(0),
-    apyBps: Array.isArray(position) && typeof position[3] === "bigint" ? position[3] : BigInt(0),
-    maturity: Array.isArray(position) && typeof position[5] === "bigint" ? position[5] : BigInt(0),
-    redeemed: Array.isArray(position) ? Boolean(position[7]) : false,
-    claimableYield: typeof claimableYield === "bigint" ? claimableYield : BigInt(0),
-  };
-}
-
-function useLiveDealPositions(address?: `0x${string}`) {
-  const [deals, setDeals] = useState<Array<{ title: string; contractAddress: `0x${string}` }>>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/admin/deals", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((payload: Array<{ title: string; contractAddress?: `0x${string}`; contractMissing?: boolean }>) => {
-        if (!cancelled) setDeals(payload.filter((deal) => deal.contractAddress && !deal.contractMissing).map((deal) => ({ title: deal.title, contractAddress: deal.contractAddress! })));
-      })
-      .catch(() => {
-        if (!cancelled) setDeals([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const reads = [useDealPosition(deals[0], address), useDealPosition(deals[1], address), useDealPosition(deals[2], address)].filter((holding) => holding.contractAddress);
-  const holdings = reads.filter((holding) => BigInt(holding.shares) > BigInt(0));
-
-  return {
-    hasLiveData: deals.length > 0,
-    holdings,
-    value: holdings.reduce((total, holding) => total + BigInt(holding.value), BigInt(0)),
-    yield: holdings.reduce((total, holding) => total + BigInt(holding.pendingYield ?? "0"), BigInt(0)),
-  };
-}
-
-function useDealPosition(deal?: { title: string; contractAddress: `0x${string}` }, address?: `0x${string}`) {
-  const { data: shares } = useReadContract({
-    address: deal?.contractAddress,
-    abi: DEAL_VAULT_ABI,
-    functionName: "getShareBalance",
-    args: address ? [address] : undefined,
-    query: { enabled: Boolean(deal?.contractAddress && address), refetchInterval: 8000 },
-  });
-  const { data: pricePerShare } = useReadContract({
-    address: deal?.contractAddress,
-    abi: DEAL_VAULT_ABI,
-    functionName: "pricePerShare",
-    query: { enabled: Boolean(deal?.contractAddress), refetchInterval: 8000 },
-  });
-  const { data: pendingYield } = useReadContract({
-    address: deal?.contractAddress,
-    abi: DEAL_VAULT_ABI,
-    functionName: "pendingYield",
-    args: address ? [address] : undefined,
-    query: { enabled: Boolean(deal?.contractAddress && address), refetchInterval: 8000 },
-  });
-  const safeShares = typeof shares === "bigint" ? shares : BigInt(0);
-  const safePrice = typeof pricePerShare === "bigint" ? pricePerShare : BigInt(0);
-
-  return {
-    title: deal?.title ?? "",
-    contractAddress: deal?.contractAddress ?? "0x0000000000000000000000000000000000000000",
-    shares: safeShares.toString(),
-    pricePerShare: safePrice.toString(),
-    value: (safeShares * safePrice).toString(),
-    pendingYield: (typeof pendingYield === "bigint" ? pendingYield : BigInt(0)).toString(),
-  };
+function formatDecimal(value?: string | null, maximumFractionDigits = 2) {
+  const parsed = Number(value ?? 0);
+  if (!Number.isFinite(parsed)) return "0";
+  return formatNumber(parsed, maximumFractionDigits);
 }
