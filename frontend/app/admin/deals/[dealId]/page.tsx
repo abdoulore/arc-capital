@@ -30,7 +30,12 @@ export default function AdminDealDetailPage() {
   const status = deal?.status ?? "open";
 
   useEffect(() => {
-    fetch("/api/admin/deals").then((res) => res.json()).then(setMetadata).catch(() => setMetadata([]));
+    fetch("/api/v2/deals", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((payload: { openDeals?: V2Deal[]; closedDeals?: V2Deal[] }) =>
+        setMetadata([...(payload.openDeals ?? []), ...(payload.closedDeals ?? [])].map(toAdminDealMetadata)),
+      )
+      .catch(() => setMetadata([]));
   }, []);
 
   async function closeDeal() {
@@ -38,13 +43,12 @@ export default function AdminDealDetailPage() {
     const ok = await admin.closeDealFunding(deal.contractAddress as Address);
     if (!ok) return;
     const closeDate = new Date().toISOString();
-    const response = await fetch("/api/admin/deals", {
+    const response = await fetch("/api/v2/deals", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id: deal.id, status: "closed", closeDate }),
+      body: JSON.stringify({ id: deal.id, status: "closed", closedAt: closeDate }),
     });
-    const updated = (await response.json()) as AdminDealMetadata;
-    setMetadata((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    if (response.ok) setMetadata((current) => current.map((item) => (item.id === deal.id ? { ...item, status: "closed", closeDate } : item)));
     await admin.logActivity("Close deal", `Closed ${deal.title}`);
   }
 
@@ -85,6 +89,32 @@ export default function AdminDealDetailPage() {
       </AdminPanel>
     </div>
   );
+}
+
+type V2Deal = {
+  id: string;
+  contractAddress?: string | null;
+  title: string;
+  riskLevel?: string | null;
+  status: "open" | "closed" | string;
+  targetRaiseUsdc?: string | null;
+  totalRaisedUsdc: string;
+  investorCount: number;
+  closedAt?: string | null;
+};
+
+function toAdminDealMetadata(deal: V2Deal): AdminDealMetadata {
+  return {
+    id: deal.id,
+    contractAddress: deal.contractAddress ?? undefined,
+    title: deal.title,
+    targetRaise: deal.targetRaiseUsdc ?? "0",
+    totalRaised: deal.totalRaisedUsdc,
+    investorCount: deal.investorCount,
+    closeDate: deal.closedAt ?? undefined,
+    riskLevel: deal.riskLevel ?? undefined,
+    status: deal.status === "closed" ? "closed" : "open",
+  };
 }
 
 function Row({ label, value }: { label: string; value: string }) {

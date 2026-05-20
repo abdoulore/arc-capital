@@ -6,7 +6,10 @@ import { usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import {
   DEAL_FACTORY_ABI,
   DEAL_FACTORY_ADDRESS,
+  DEAL_FACTORY_V2_ABI,
+  DEAL_FACTORY_V2_ADDRESS,
   DEAL_VAULT_ABI,
+  DEAL_VAULT_V2_ABI,
   LONG_TERM_VAULT_ABI,
   LONG_TERM_VAULT_ADDRESS,
   MARKETPLACE_ABI,
@@ -136,7 +139,7 @@ export function useAdminContracts() {
         () => writeEstimatedAdminContract({ writeContractAsync, request: { address: YIELD_ROUTER_ADDRESS, abi: YIELD_ROUTER_ABI, functionName: "routeYield", args: [LONG_TERM_VAULT_ADDRESS, parsedAmount, "fixed-income-yield-reserve"] } }),
       ]);
     },
-    createDeal: async (input: { title: string; targetRaise: string; minRaise: string; deadline: string }) => {
+    createDeal: async (input: { title: string; targetRaise: string; minRaise: string; deadline: string; metadataId?: string }) => {
       const deadlineSeconds = Math.floor(new Date(input.deadline).getTime() / 1000);
       if (!publicClient || !Number.isFinite(deadlineSeconds)) {
         addToast({ title: "Invalid deadline", message: "Choose a valid funding deadline before creating the deal.", status: "error" });
@@ -144,8 +147,8 @@ export function useAdminContracts() {
       }
 
       const dealIndex = await publicClient.readContract({
-        address: DEAL_FACTORY_ADDRESS,
-        abi: DEAL_FACTORY_ABI,
+        address: DEAL_FACTORY_V2_ADDRESS,
+        abi: DEAL_FACTORY_V2_ABI,
         functionName: "dealCount",
       });
       const ok = await run("Create deal vault", [
@@ -155,11 +158,12 @@ export function useAdminContracts() {
             account: address as Address | undefined,
             writeContractAsync,
             request: {
-            address: DEAL_FACTORY_ADDRESS,
-            abi: DEAL_FACTORY_ABI,
+            address: DEAL_FACTORY_V2_ADDRESS,
+            abi: DEAL_FACTORY_V2_ABI,
             functionName: "createDeal",
             args: [
               input.title,
+              input.metadataId ?? `arc-deal-${Date.now()}`,
               "",
               parseUnits(input.targetRaise || "0", 6),
               parseUnits(input.minRaise || "0", 6),
@@ -171,33 +175,33 @@ export function useAdminContracts() {
       ]);
       if (!ok) return false;
       return publicClient.readContract({
-        address: DEAL_FACTORY_ADDRESS,
-        abi: DEAL_FACTORY_ABI,
+        address: DEAL_FACTORY_V2_ADDRESS,
+        abi: DEAL_FACTORY_V2_ABI,
         functionName: "allDeals",
         args: [dealIndex],
       });
     },
     closeDealFunding: (dealAddress: Address = SAMPLE_DEAL_ADDRESS) =>
       run("Close deal funding", [
-        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: dealAddress, abi: DEAL_VAULT_ABI, functionName: "adminCloseRaise" } }),
+        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: dealAddress, abi: DEAL_VAULT_V2_ABI, functionName: "adminCloseRaise" } }),
       ]),
     markDealCapitalDeployed: (dealAddress: Address = SAMPLE_DEAL_ADDRESS) =>
       run("Mark deal capital deployed", [
-        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: dealAddress, abi: DEAL_VAULT_ABI, functionName: "markCapitalDeployed" } }),
+        () => writeEstimatedAdminContract({ publicClient, account: address as Address | undefined, writeContractAsync, request: { address: dealAddress, abi: DEAL_VAULT_V2_ABI, functionName: "markCapitalDeployed" } }),
       ]),
     distributeDealRevenue: async (amount: string, dealAddress: Address = SAMPLE_DEAL_ADDRESS) => {
       const parsedAmount = parseUnits(amount || "0", 6);
       const steps = await buildApprovalSteps(dealAddress, parsedAmount);
       return run("Distribute deal revenue", [
         ...steps,
-        () => writeEstimatedAdminContract({ writeContractAsync, request: { address: dealAddress, abi: DEAL_VAULT_ABI, functionName: "distributeRevenue", args: [parsedAmount] } }),
+        () => writeEstimatedAdminContract({ writeContractAsync, request: { address: dealAddress, abi: DEAL_VAULT_V2_ABI, functionName: "distributeRevenue", args: [parsedAmount] } }),
       ]);
     },
     logActivity: async (action: string, summary: string, hash?: string) => {
-      await fetch("/api/admin/activity", {
+      await fetch("/api/v2/admin/activity", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action, summary, hash, operator: address }),
+        body: JSON.stringify({ action, summary, txHash: hash, operatorWallet: address }),
       });
     },
   };

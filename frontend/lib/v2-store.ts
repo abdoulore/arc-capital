@@ -323,6 +323,96 @@ export async function getV2Deals() {
   };
 }
 
+export async function upsertV2DealMetadata(input: {
+  id?: string;
+  dealVaultAddress?: string | null;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  category?: string;
+  riskLevel?: string;
+  targetRaiseUsdc?: string;
+  minInvestmentUsdc?: string;
+  fundingDeadline?: string;
+  revenueDistributionModel?: string;
+  expectedPayoutSchedule?: string;
+  status?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, deal: null };
+  const id = input.id && isUuid(input.id) ? input.id : crypto.randomUUID();
+  const dealVaultAddress = input.dealVaultAddress?.toLowerCase() ?? null;
+  const result = await pool.query(
+    `insert into v2_deals (
+       id, deal_vault_address, title, subtitle, description, category, risk_level,
+       status, target_raise_usdc, min_investment_usdc, funding_deadline,
+       revenue_distribution_model, expected_payout_schedule, metadata
+     )
+     values ($1, $2, $3, $4, $5, $6, $7, coalesce($8, 'open'), $9, $10, $11, $12, $13, $14)
+     on conflict (deal_vault_address) do update set
+       title = excluded.title,
+       subtitle = excluded.subtitle,
+       description = excluded.description,
+       category = excluded.category,
+       risk_level = excluded.risk_level,
+       status = excluded.status,
+       target_raise_usdc = excluded.target_raise_usdc,
+       min_investment_usdc = excluded.min_investment_usdc,
+       funding_deadline = excluded.funding_deadline,
+       revenue_distribution_model = excluded.revenue_distribution_model,
+       expected_payout_schedule = excluded.expected_payout_schedule,
+       metadata = v2_deals.metadata || excluded.metadata,
+       updated_at = now()
+     returning id`,
+    [
+      id,
+      dealVaultAddress,
+      input.title,
+      input.subtitle ?? null,
+      input.description ?? null,
+      input.category ?? null,
+      input.riskLevel ?? null,
+      input.status ?? "open",
+      input.targetRaiseUsdc ?? null,
+      input.minInvestmentUsdc ?? null,
+      input.fundingDeadline ? new Date(input.fundingDeadline).toISOString() : null,
+      input.revenueDistributionModel ?? null,
+      input.expectedPayoutSchedule ?? null,
+      input.metadata ?? {},
+    ],
+  );
+  return { status: "live" as V2DataStatus, deal: result.rows[0] };
+}
+
+export async function updateV2DealStatus(input: { id?: string; dealVaultAddress?: string | null; status: string; closedAt?: string | null }) {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, updated: false };
+  const values: unknown[] = [input.status, input.closedAt ? new Date(input.closedAt).toISOString() : null];
+  const where = input.id ? "id = $3" : "lower(deal_vault_address) = lower($3)";
+  values.push(input.id ?? input.dealVaultAddress ?? "");
+  const result = await pool.query(
+    `update v2_deals
+     set status = $1,
+         closed_at = coalesce($2, closed_at),
+         updated_at = now()
+     where ${where}`,
+    values,
+  );
+  return { status: "live" as V2DataStatus, updated: (result.rowCount ?? 0) > 0 };
+}
+
+export async function logV2AdminActivity(input: { operatorWallet?: string | null; action: string; summary: string; txHash?: string | null }) {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, logged: false };
+  await pool.query(
+    `insert into v2_admin_activity (id, operator_wallet, action, summary, tx_hash)
+     values ($1, $2, $3, $4, $5)`,
+    [crypto.randomUUID(), input.operatorWallet?.toLowerCase() ?? null, input.action, input.summary, input.txHash ?? null],
+  );
+  return { status: "live" as V2DataStatus, logged: true };
+}
+
 export async function getV2Marketplace(wallet?: string | null) {
   const pool = await getV2Pool();
   if (!pool) return { status: "pending" as V2DataStatus, listings: [], userOrders: [], trades: [] };
@@ -948,6 +1038,10 @@ function deriveDealStatus(status: string, deadline?: Date | null) {
 
 function normalizeWallet(wallet: string) {
   return wallet.trim().toLowerCase();
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function decimalString(value: unknown) {

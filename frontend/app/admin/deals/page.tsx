@@ -27,8 +27,21 @@ export default function AdminDealsPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/deals").then((res) => res.json()).then(setMetadata).catch(() => setMetadata([]));
+    loadDeals();
   }, []);
+
+  async function loadDeals() {
+    try {
+      const response = await fetch("/api/v2/deals", { cache: "no-store" });
+      const payload = (await response.json()) as {
+        openDeals?: V2Deal[];
+        closedDeals?: V2Deal[];
+      };
+      setMetadata([...(payload.openDeals ?? []), ...(payload.closedDeals ?? [])].map(toDealMetadata));
+    } catch {
+      setMetadata([]);
+    }
+  }
 
   async function createDeal() {
     const validationError = validateDealForm({ title, targetRaise, minRaise, deadline });
@@ -38,33 +51,29 @@ export default function AdminDealsPage() {
     }
     setFormError(null);
 
-    const contractAddress = await admin.createDeal({ title, targetRaise, minRaise, deadline });
+    const metadataId = slugifyDeal(title);
+    const contractAddress = await admin.createDeal({ title, targetRaise, minRaise, deadline, metadataId });
     if (contractAddress) {
-      const response = await fetch("/api/admin/deals", {
+      await fetch("/api/v2/deals", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          id: String(contractAddress).toLowerCase(),
-          contractAddress,
+          dealVaultAddress: contractAddress,
           title,
           subtitle,
           description,
-          targetRaise,
-          totalRaised: "0",
-          ownershipIssued: "0",
-          distributions: "0",
-          investorCount: 0,
-          fundingDeadline: deadline,
+          targetRaiseUsdc: targetRaise,
+          minInvestmentUsdc: minRaise,
+          fundingDeadline: new Date(deadline).toISOString(),
           riskLevel,
-          revenueModel,
-          expectedYield,
-          payoutSchedule,
+          revenueDistributionModel: revenueModel,
+          expectedPayoutSchedule: payoutSchedule,
           status: "open",
+          metadata: { expectedYield, metadataId },
         }),
       });
-      const entry = (await response.json()) as DealMetadata;
-      setMetadata((current) => [entry, ...current.filter((deal) => deal.id !== entry.id)]);
       await admin.logActivity("Create deal", `Created ${title}`);
+      await loadDeals();
       setTitle("");
       setSubtitle("");
       setDescription("");
@@ -83,21 +92,24 @@ export default function AdminDealsPage() {
     if (!ok) return;
 
     const closeDate = new Date().toISOString();
-    const response = await fetch("/api/admin/deals", {
+    const response = await fetch("/api/v2/deals", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id: deal.id, status: "closed", closeDate }),
+      body: JSON.stringify({ id: deal.id, status: "closed", closedAt: closeDate }),
     });
     if (response.ok) {
-      const updated = (await response.json()) as DealMetadata;
-      setMetadata((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      await loadDeals();
     }
     setCloseCandidate(null);
     await admin.logActivity("Close deal", `Closed ${deal.title}`);
   }
 
   async function deleteDeal(deal: DealMetadata) {
-    const response = await fetch(`/api/admin/deals?id=${encodeURIComponent(deal.id)}`, { method: "DELETE" });
+    const response = await fetch("/api/v2/deals", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: deal.id, status: "archived", closedAt: new Date().toISOString() }),
+    });
     if (response.ok) {
       setMetadata((current) => current.filter((item) => item.id !== deal.id));
       setDeleteCandidate(null);
@@ -213,4 +225,39 @@ export default function AdminDealsPage() {
       ) : null}
     </div>
   );
+}
+
+type V2Deal = {
+  id: string;
+  contractAddress?: Address | null;
+  title: string;
+  subtitle?: string | null;
+  riskLevel?: string | null;
+  status: "open" | "closed" | string;
+  targetRaiseUsdc?: string | null;
+  totalRaisedUsdc: string;
+  investorCount: number;
+  fundingDeadline?: string | null;
+  closedAt?: string | null;
+};
+
+function toDealMetadata(deal: V2Deal): DealMetadata {
+  return {
+    id: deal.id,
+    contractAddress: deal.contractAddress ?? undefined,
+    title: deal.title,
+    subtitle: deal.subtitle ?? undefined,
+    targetRaise: deal.targetRaiseUsdc ?? "0",
+    totalRaised: deal.totalRaisedUsdc,
+    investorCount: deal.investorCount,
+    fundingDeadline: deal.fundingDeadline ?? undefined,
+    closeDate: deal.closedAt ?? undefined,
+    riskLevel: deal.riskLevel ?? undefined,
+    status: deal.status === "closed" || deal.status === "archived" ? deal.status : "open",
+  };
+}
+
+function slugifyDeal(value: string) {
+  const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return `${slug || "deal"}-${Date.now()}`;
 }
