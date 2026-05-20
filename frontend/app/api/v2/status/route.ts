@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getV2BackendStatus } from "@/lib/v2-store";
+import { getV2Health } from "@/lib/v2-health";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json(await getV2BackendStatus());
+  return NextResponse.json(await getV2Health());
 }
