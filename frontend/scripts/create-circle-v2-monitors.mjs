@@ -32,6 +32,10 @@ const dealVaultEvents = [
   "DealRaiseClosed(uint256,address,uint256,uint256)",
   "DealRevenueDistributed(uint256,address,uint256,uint256)",
   "DealYieldClaimed(uint256,address,uint256)",
+  "Invested(address,uint256,uint256)",
+  "RevenueDistributed(address,uint256)",
+  "YieldClaimed(address,uint256)",
+  "RaiseClosed()",
 ];
 
 const baseContracts = [
@@ -44,6 +48,9 @@ const baseContracts = [
       "MonthlyWithdrawRequested(address,uint256,uint256,uint256,uint256)",
       "MonthlyWithdrawExecuted(address,uint256,uint256,uint256,uint256,uint256,bool)",
       "MonthlyYieldInjected(address,uint256,uint256,uint256)",
+      "Deposit(address,uint256,uint256)",
+      "Withdraw(address,uint256)",
+      "WithdrawRequested(address,uint256)",
     ],
   },
   {
@@ -55,6 +62,10 @@ const baseContracts = [
       "FixedIncomeYieldClaimed(address,uint256,uint256,uint256)",
       "FixedIncomeRedeemed(address,uint256,uint256,uint256)",
       "FixedIncomeEarlyExited(address,uint256,uint256,uint256)",
+      "Deposited(address,uint256,uint256,uint256,uint256)",
+      "YieldClaimed(address,uint256,uint256)",
+      "Redeemed(address,uint256,uint256)",
+      "EarlyExited(address,uint256,uint256,uint256)",
     ],
   },
   {
@@ -71,6 +82,9 @@ const baseContracts = [
       "MarketplaceListingCreated(uint256,uint256,address,address,uint256,uint256)",
       "MarketplaceListingFilled(uint256,uint256,address,address,uint256,uint256,uint256)",
       "MarketplaceListingCancelled(uint256,uint256,address,address,uint256)",
+      "ListingCreated(uint256,address,address,uint256,uint256,uint256)",
+      "ListingFilled(uint256,address,uint256,uint256)",
+      "ListingCancelled(uint256)",
     ],
   },
 ].filter((contract) => isAddressLike(contract.address));
