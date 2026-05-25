@@ -12,6 +12,8 @@ const INDEXER_WEBHOOK_SECRET = process.env.INDEXER_WEBHOOK_SECRET;
 const FROM_BLOCK = BigInt(process.env.V2_INDEXER_FROM_BLOCK ?? "0");
 const TO_BLOCK = process.env.V2_INDEXER_TO_BLOCK ? BigInt(process.env.V2_INDEXER_TO_BLOCK) : undefined;
 const CHUNK_SIZE = BigInt(process.env.V2_INDEXER_CHUNK_SIZE ?? "1000");
+const USDC_DECIMAL_SCALE = BigInt(1_000_000);
+const SHARE_DECIMAL_SCALE = BigInt(1_000_000_000_000_000_000);
 
 const arcTestnet = {
   id: ARC_TESTNET_CHAIN_ID,
@@ -71,6 +73,8 @@ async function main() {
   }
 
   const latest = TO_BLOCK ?? await client.getBlockNumber();
+  console.log(`Ingest target: ${sanitizeUrl(INGEST_URL)}`);
+  console.log(`Scanning ${configuredContracts.length} contract(s) from block ${FROM_BLOCK} to ${latest} in chunks of ${CHUNK_SIZE}.`);
   let accepted = 0;
   let inserted = 0;
   for (let fromBlock = FROM_BLOCK; fromBlock <= latest; fromBlock += CHUNK_SIZE + BigInt(1)) {
@@ -134,7 +138,13 @@ function inferActor(args) {
 }
 
 function serializeArgs(args) {
-  return Object.fromEntries(Object.entries(args ?? {}).map(([key, value]) => [key, serializeValue(value)]));
+  return Object.fromEntries(
+    Object.entries(args ?? {}).map(([key, value]) => {
+      if (key === "shares" || key === "shareAmount") return [key, sharesFromRaw(value)];
+      if (isUsdcLikeKey(key)) return [key, usdcFromRaw(value)];
+      return [key, serializeValue(value)];
+    }),
+  );
 }
 
 function serializeValue(value) {
@@ -146,12 +156,34 @@ function serializeValue(value) {
   return value;
 }
 
+function isUsdcLikeKey(key) {
+  return new Set(["amount", "assets", "grossAssets", "netAssets", "penalty", "principal", "totalPrice", "returnedPrincipal"]).has(key);
+}
+
+function usdcFromRaw(value) {
+  if (typeof value !== "bigint") return value;
+  const whole = value / USDC_DECIMAL_SCALE;
+  const fraction = value % USDC_DECIMAL_SCALE;
+  return `${whole.toString()}.${fraction.toString().padStart(6, "0")}`;
+}
+
+function sharesFromRaw(value) {
+  if (typeof value !== "bigint") return value;
+  const whole = value / SHARE_DECIMAL_SCALE;
+  const fraction = value % SHARE_DECIMAL_SCALE;
+  return `${whole.toString()}.${fraction.toString().padStart(18, "0").replace(/0+$/, "") || "0"}`;
+}
+
 function minBigInt(a, b) {
   return a < b ? a : b;
 }
 
 function isAddressLike(value) {
   return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+function sanitizeUrl(value) {
+  return value.replace(/(secret=)[^&\s]+/i, "$1[hidden]");
 }
 
 function loadEnvFile(file) {

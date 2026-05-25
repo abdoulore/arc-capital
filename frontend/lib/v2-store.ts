@@ -125,6 +125,30 @@ export async function getV2IndexerDebug() {
   };
 }
 
+export async function repairV2MonthlyShareDecimals() {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, updatedActivity: 0, updatedPositions: 0 };
+
+  const [activity, positions] = await Promise.all([
+    pool.query(
+      `update v2_monthly_vault_activity
+       set shares = shares / 1000000000000
+       where shares >= 1000000000000`,
+    ),
+    pool.query(
+      `update v2_monthly_vault_positions
+       set shares = shares / 1000000000000
+       where shares >= 1000000000000`,
+    ),
+  ]);
+
+  return {
+    status: "live" as V2DataStatus,
+    updatedActivity: activity.rowCount ?? 0,
+    updatedPositions: positions.rowCount ?? 0,
+  };
+}
+
 export async function ingestV2Events(events: V2IndexedEventInput[]) {
   const pool = await getV2Pool();
   if (!pool) {
