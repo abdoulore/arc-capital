@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "index:v2": "node scripts/v2-indexer.mjs",
+    "circle:monitors:v2": "node scripts/create-circle-v2-monitors.mjs",
     "lint": "eslint"
   },
   "dependencies": {
+    "@circle-fin/smart-contract-platform": "^8.4.0",
     "@rainbow-me/rainbowkit": "^2.2.10",
     "@tanstack/react-query": "^5.100.6",
     "@types/pg": "^8.20.0",
