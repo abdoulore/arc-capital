@@ -149,6 +149,85 @@ export async function repairV2MonthlyShareDecimals() {
   };
 }
 
+export async function reprojectV2StoredEvents(limit = 500) {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus, projected: 0 };
+  const rows = await many<{
+    chain_id: number;
+    contract_address: string;
+    event_name: string;
+    tx_hash: string;
+    log_index: number;
+    block_number: string;
+    block_timestamp: Date | null;
+    actor_wallet: string | null;
+    payload: Record<string, unknown>;
+  }>(
+    pool,
+    `select chain_id, contract_address, event_name, tx_hash, log_index, block_number::text,
+            block_timestamp, actor_wallet, payload
+     from v2_contract_events
+     order by indexed_at asc
+     limit $1`,
+    [limit],
+  );
+
+  for (const row of rows) {
+    await projectV2Event(pool, {
+      chainId: row.chain_id,
+      contractAddress: row.contract_address,
+      eventName: row.event_name,
+      txHash: row.tx_hash,
+      logIndex: row.log_index,
+      blockNumber: row.block_number,
+      blockTimestamp: row.block_timestamp?.toISOString(),
+      actorWallet: row.actor_wallet ?? undefined,
+      payload: row.payload,
+    });
+  }
+
+  return { status: "live" as V2DataStatus, projected: rows.length };
+}
+
+export async function getV2IndexerCursor(name: string, fallbackBlock: bigint) {
+  const pool = await getV2Pool();
+  if (!pool) return fallbackBlock;
+  const cursor = await one<{ last_block: string }>(
+    pool,
+    `select last_block::text
+     from v2_indexer_cursors
+     where name = $1`,
+    [name],
+  );
+  return cursor ? BigInt(cursor.last_block) : fallbackBlock;
+}
+
+export async function updateV2IndexerCursor(name: string, lastBlock: bigint) {
+  const pool = await getV2Pool();
+  if (!pool) return { status: "pending" as V2DataStatus };
+  await pool.query(
+    `insert into v2_indexer_cursors (name, last_block, updated_at)
+     values ($1, $2, now())
+     on conflict (name) do update set
+       last_block = greatest(v2_indexer_cursors.last_block, excluded.last_block),
+       updated_at = now()`,
+    [name, lastBlock.toString()],
+  );
+  return { status: "live" as V2DataStatus };
+}
+
+export async function getV2PollDealVaultAddresses() {
+  const pool = await getV2Pool();
+  if (!pool) return [];
+  const rows = await many<{ deal_vault_address: string }>(
+    pool,
+    `select distinct lower(deal_vault_address) as deal_vault_address
+     from v2_deals
+     where deal_vault_address is not null`,
+  );
+  return rows.map((row) => row.deal_vault_address);
+}
+
 export async function ingestV2Events(events: V2IndexedEventInput[]) {
   const pool = await getV2Pool();
   if (!pool) {
@@ -185,10 +264,8 @@ export async function ingestV2Events(events: V2IndexedEventInput[]) {
       ],
     );
 
-    if (result.rowCount) {
-      inserted += 1;
-      await projectV2Event(pool, event);
-    }
+    if (result.rowCount) inserted += 1;
+    await projectV2Event(pool, event);
   }
 
   return {
@@ -854,7 +931,35 @@ export async function getV2Activity(options: { wallet?: string; limit?: number; 
      limit ${limitParam}`,
     params,
   );
-  return rows.map((row) => ({
+  if (options.source === "monthly") {
+    return rows.map((row) => ({
+      id: row.id,
+      action: row.activity_type,
+      valueUsdc: row.amount_usdc,
+      shares: row.shares,
+      txHash: row.tx_hash,
+      timestamp: row.occurred_at.toISOString(),
+      source: "indexed" as const,
+    }));
+  }
+
+  const fixedRows = await many<{
+    id: string;
+    principal_usdc: string;
+    created_tx_hash: string | null;
+    start_at: Date;
+  }>(
+    pool,
+    `select id, principal_usdc, created_tx_hash, start_at
+     from v2_fixed_income_positions
+     ${options.wallet ? "where wallet = $1" : ""}
+     order by start_at desc
+     limit ${limitParam}`,
+    params,
+  );
+
+  return [
+    ...rows.map((row) => ({
     id: row.id,
     action: row.activity_type,
     valueUsdc: row.amount_usdc,
@@ -862,7 +967,18 @@ export async function getV2Activity(options: { wallet?: string; limit?: number; 
     txHash: row.tx_hash,
     timestamp: row.occurred_at.toISOString(),
     source: "indexed" as const,
-  }));
+    })),
+    ...fixedRows.map((row) => ({
+      id: row.id,
+      action: "Fixed-income deposit",
+      valueUsdc: row.principal_usdc,
+      txHash: row.created_tx_hash ?? undefined,
+      timestamp: row.start_at.toISOString(),
+      source: "indexed" as const,
+    })),
+  ]
+    .sort((a, b) => new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime())
+    .slice(0, limit);
 }
 
 async function manyMarketplaceListings(pool: Pool, where: string, params: unknown[]) {
@@ -1065,6 +1181,12 @@ async function ensureV2Schema(pool: Pool) {
       snapshot_at timestamptz not null default now()
     );
 
+    create table if not exists v2_indexer_cursors (
+      name text primary key,
+      last_block numeric(78, 0) not null,
+      updated_at timestamptz not null default now()
+    );
+
     create index if not exists v2_portfolio_snapshots_wallet_idx on v2_portfolio_snapshots (wallet, snapshot_at desc);
     create index if not exists v2_contract_events_actor_idx on v2_contract_events (actor_wallet, block_timestamp desc);
     create index if not exists v2_deals_status_idx on v2_deals (status, funding_deadline);
@@ -1179,23 +1301,28 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
     );
   }
 
-  if (eventName === "fixedincomepositionopened" && wallet) {
+  if ((eventName === "fixedincomepositionopened" || eventName === "deposited") && wallet) {
+    const start = Number(payload.start ?? timestampSeconds(timestamp));
+    const duration = Number(payload.duration ?? 0);
+    const maturity = Number(payload.maturity ?? (duration > 0 ? start + duration : start));
     await pool.query(
       `insert into v2_fixed_income_positions (
          id, wallet, onchain_position_id, principal_usdc, apy_bps,
          duration_seconds, start_at, maturity_at, claimable_yield_usdc, created_tx_hash
        )
-       values ($1, $2, $3, $4, $5, $6, to_timestamp($7), to_timestamp($8), 0, $9)
-       on conflict (id) do nothing`,
+       select $1, $2, $3, $4, $5, $6, to_timestamp($7), to_timestamp($8), 0, $9
+       where not exists (
+         select 1 from v2_fixed_income_positions where created_tx_hash = $9
+       )`,
       [
         crypto.randomUUID(),
         wallet,
         stringValue(payload.positionId) ?? "0",
-        usdcValue(payload.amountUsdc, payload.principal),
+        usdcValue(payload.amountUsdc, payload.principal ?? payload.amount),
         Number(payload.apyBps ?? 0),
-        Number(payload.duration ?? 0),
-        Number(payload.start ?? 0),
-        Number(payload.maturity ?? 0),
+        duration,
+        start,
+        maturity,
         event.txHash,
       ],
     );
@@ -1336,6 +1463,10 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
       [event.chainId ?? ARC_TESTNET_CHAIN_ID, listingId, timestamp],
     );
   }
+
+  if (wallet) {
+    await refreshV2PortfolioSnapshot(pool, wallet);
+  }
 }
 
 async function one<T extends QueryResultRow>(pool: Pool, text: string, values: unknown[] = []) {
@@ -1424,6 +1555,54 @@ function usdcValue(preferred: unknown, fallback: unknown) {
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function timestampSeconds(timestamp: string) {
+  const millis = new Date(timestamp).getTime();
+  return Number.isFinite(millis) ? Math.floor(millis / 1000) : Math.floor(Date.now() / 1000);
+}
+
+async function refreshV2PortfolioSnapshot(pool: Pool, wallet: string) {
+  await pool.query(
+    `with monthly as (
+       select coalesce(current_value_usdc, 0) as value, coalesce(claimable_yield_usdc, 0) as yield
+       from v2_monthly_vault_positions
+       where wallet = $1
+     ),
+     fixed as (
+       select coalesce(sum(principal_usdc) filter (where redeemed_at is null), 0) as value,
+              coalesce(sum(claimable_yield_usdc) filter (where redeemed_at is null), 0) as yield
+       from v2_fixed_income_positions
+       where wallet = $1
+     ),
+     deals as (
+       select coalesce(sum(amount_usdc), 0) as value
+       from v2_deal_investments
+       where investor_wallet = $1
+     ),
+     totals as (
+       select
+         coalesce((select value from monthly), 0) as monthly_value,
+         coalesce((select value from fixed), 0) as fixed_value,
+         coalesce((select value from deals), 0) as deal_value,
+         coalesce((select yield from monthly), 0) + coalesce((select yield from fixed), 0) as claimable_yield
+     )
+     insert into v2_portfolio_snapshots (
+       id, wallet, total_value_usdc, wallet_cash_usdc, monthly_vault_usdc,
+       fixed_income_usdc, deal_holdings_usdc, claimable_yield_usdc, snapshot_at
+     )
+     select
+       $2, $1,
+       monthly_value + fixed_value + deal_value,
+       0,
+       monthly_value,
+       fixed_value,
+       deal_value,
+       claimable_yield,
+       now()
+     from totals`,
+    [wallet, crypto.randomUUID()],
+  );
 }
 
 async function findDealIdByVaultAddress(pool: Pool, address?: string | null) {

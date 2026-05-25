@@ -190,7 +190,7 @@ export function getV2EventSources() {
 export function normalizeArcLog(log: Log, blockTimestamp?: string): V2IndexedEventInput | undefined {
   if (!log.transactionHash || log.logIndex === null) return undefined;
   for (const definition of getV2EventSources()) {
-    if (definition.address && log.address.toLowerCase() !== definition.address.toLowerCase()) continue;
+    if (!matchesSourceAddress(definition, log.address)) continue;
     try {
       const decoded = decodeEventLog({
         abi: [definition.abiItem],
@@ -279,9 +279,27 @@ export function eventSignatureForSource(source: V2EventSource) {
 function findDefinitionForCircleEvent(contractAddress: string, eventNameOrSignature?: string) {
   const cleanName = cleanCircleEventName(eventNameOrSignature ?? "");
   return getV2EventSources().find((definition) => {
-    const addressMatches = !definition.address || definition.address.toLowerCase() === contractAddress.toLowerCase();
+    const addressMatches = matchesSourceAddress(definition, contractAddress);
     return addressMatches && definition.abiItem.name === cleanName;
   });
+}
+
+function matchesSourceAddress(definition: V2EventSource, address: string) {
+  if (!definition.address) return true;
+  const normalized = address.toLowerCase();
+  return sourceAddresses(definition.source).some((sourceAddress) => sourceAddress.toLowerCase() === normalized);
+}
+
+function sourceAddresses(source: V2EventSource["source"]) {
+  const addresses =
+    source === "monthlyVault"
+      ? [arcCapitalContracts.monthlyVault, arcCapitalContracts.monthlyVaultV2]
+      : source === "longTermVault"
+        ? [arcCapitalContracts.longTermVault, arcCapitalContracts.longTermVaultV2]
+        : source === "marketplace"
+          ? [arcCapitalContracts.marketplace, arcCapitalContracts.marketplaceV2]
+          : [];
+  return addresses.filter(isConfiguredAddress);
 }
 
 function cleanCircleEventName(eventNameOrSignature: string) {
