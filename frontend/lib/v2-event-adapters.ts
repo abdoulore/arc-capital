@@ -25,7 +25,22 @@ const EVENT_DEFINITIONS = [
   {
     source: "monthlyVault",
     address: arcCapitalContracts.monthlyVaultV2,
+    abiItem: parseAbiItem("event MonthlyWithdrawCancelled(address indexed user, uint256 indexed requestId, uint256 shares)"),
+  },
+  {
+    source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVaultV2,
     abiItem: parseAbiItem("event MonthlyYieldInjected(address indexed operator, uint256 amount, uint256 routedYieldAfter, uint256 navAfter)"),
+  },
+  {
+    source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVaultV2,
+    abiItem: parseAbiItem("event MonthlyNAVUpdated(address indexed operator, uint256 nav, uint256 timestamp)"),
+  },
+  {
+    source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVaultV2,
+    abiItem: parseAbiItem("event MonthlyConfigUpdated(address indexed operator, string key, uint256 value)"),
   },
   {
     source: "monthlyVault",
@@ -41,6 +56,26 @@ const EVENT_DEFINITIONS = [
     source: "monthlyVault",
     address: arcCapitalContracts.monthlyVault,
     abiItem: parseAbiItem("event WithdrawRequested(address indexed user, uint256 shares)"),
+  },
+  {
+    source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVault,
+    abiItem: parseAbiItem("event FeesAccrued(uint256 mgmt, uint256 perf)"),
+  },
+  {
+    source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVault,
+    abiItem: parseAbiItem("event OracleUpdated(uint256 indexed id, uint256 assets)"),
+  },
+  {
+    source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVault,
+    abiItem: parseAbiItem("event PenaltyApplied(address indexed user, uint256 grossAmount, uint256 penalty)"),
+  },
+  {
+    source: "monthlyVault",
+    address: arcCapitalContracts.monthlyVault,
+    abiItem: parseAbiItem("event NAVUpdated(uint256 nav, uint256 timestamp)"),
   },
   {
     source: "longTermVault",
@@ -64,6 +99,16 @@ const EVENT_DEFINITIONS = [
   },
   {
     source: "longTermVault",
+    address: arcCapitalContracts.longTermVaultV2,
+    abiItem: parseAbiItem("event FixedIncomeTrancheConfigured(address indexed operator, uint256 duration, uint256 apyBps, bool enabled)"),
+  },
+  {
+    source: "longTermVault",
+    address: arcCapitalContracts.longTermVaultV2,
+    abiItem: parseAbiItem("event FixedIncomeConfigUpdated(address indexed operator, string key, uint256 value)"),
+  },
+  {
+    source: "longTermVault",
     address: arcCapitalContracts.longTermVault,
     abiItem: parseAbiItem("event Deposited(address indexed user, uint256 indexed positionId, uint256 amount, uint256 duration, uint256 apyBps)"),
   },
@@ -83,6 +128,11 @@ const EVENT_DEFINITIONS = [
     abiItem: parseAbiItem("event EarlyExited(address indexed user, uint256 indexed positionId, uint256 returnedPrincipal, uint256 penalty)"),
   },
   {
+    source: "longTermVault",
+    address: arcCapitalContracts.longTermVault,
+    abiItem: parseAbiItem("event TrancheConfigured(uint256 duration, uint256 apyBps, bool enabled)"),
+  },
+  {
     source: "dealVault",
     address: undefined,
     abiItem: parseAbiItem("event DealCreated(uint256 indexed dealId, address indexed dealVault, address indexed operator, string metadataId, uint256 targetRaise, uint256 minRaise, uint256 pricePerShare, uint256 closeTime)"),
@@ -100,12 +150,22 @@ const EVENT_DEFINITIONS = [
   {
     source: "dealVault",
     address: undefined,
+    abiItem: parseAbiItem("event DealCapitalDeployed(uint256 indexed dealId, address indexed operator, uint256 amount)"),
+  },
+  {
+    source: "dealVault",
+    address: undefined,
     abiItem: parseAbiItem("event DealRevenueDistributed(uint256 indexed dealId, address indexed operator, uint256 amount, uint256 accRevenuePerShareAfter)"),
   },
   {
     source: "dealVault",
     address: undefined,
     abiItem: parseAbiItem("event DealYieldClaimed(uint256 indexed dealId, address indexed investor, uint256 amount)"),
+  },
+  {
+    source: "dealVault",
+    address: undefined,
+    abiItem: parseAbiItem("event DealConfigUpdated(uint256 indexed dealId, address indexed operator, string key, uint256 value)"),
   },
   {
     source: "dealVault",
@@ -121,6 +181,11 @@ const EVENT_DEFINITIONS = [
     source: "dealVault",
     address: undefined,
     abiItem: parseAbiItem("event YieldClaimed(address indexed investor, uint256 amount)"),
+  },
+  {
+    source: "dealVault",
+    address: undefined,
+    abiItem: parseAbiItem("event CapitalMarkedDeployed(uint256 amount)"),
   },
   {
     source: "dealVault",
@@ -144,6 +209,11 @@ const EVENT_DEFINITIONS = [
   },
   {
     source: "marketplace",
+    address: arcCapitalContracts.marketplaceV2,
+    abiItem: parseAbiItem("event MarketplacePaused(address indexed operator, bool paused)"),
+  },
+  {
+    source: "marketplace",
     address: arcCapitalContracts.marketplace,
     abiItem: parseAbiItem("event ListingCreated(uint256 indexed listingId, address indexed seller, address indexed token, uint256 dealId, uint256 amount, uint256 pricePerShare)"),
   },
@@ -156,6 +226,36 @@ const EVENT_DEFINITIONS = [
     source: "marketplace",
     address: arcCapitalContracts.marketplace,
     abiItem: parseAbiItem("event ListingCancelled(uint256 indexed listingId)"),
+  },
+  {
+    source: "vaultFactory",
+    address: arcCapitalContracts.vaultFactory,
+    abiItem: parseAbiItem("event MonthlyVaultCreated(address indexed proxy, address indexed implementation)"),
+  },
+  {
+    source: "vaultFactory",
+    address: arcCapitalContracts.vaultFactory,
+    abiItem: parseAbiItem("event LongTermVaultCreated(address indexed vault)"),
+  },
+  {
+    source: "dealFactory",
+    address: arcCapitalContracts.dealFactory,
+    abiItem: parseAbiItem("event DealCreated(uint256 indexed dealIndex, address indexed dealVault, string dealName, uint256 targetRaise, uint256 pricePerShare)"),
+  },
+  {
+    source: "yieldRouter",
+    address: arcCapitalContracts.yieldRouter,
+    abiItem: parseAbiItem("event YieldRouted(address indexed source, address indexed destination, uint256 amount, string yieldType)"),
+  },
+  {
+    source: "yieldRouter",
+    address: arcCapitalContracts.yieldRouter,
+    abiItem: parseAbiItem("event TreasuryUpdated(address indexed treasury)"),
+  },
+  {
+    source: "navOracle",
+    address: arcCapitalContracts.navOracle,
+    abiItem: parseAbiItem("event NAVUpdated(address indexed vault, uint256 nav, uint256 timestamp)"),
   },
 ] as const;
 
@@ -298,6 +398,14 @@ function sourceAddresses(source: V2EventSource["source"]) {
         ? [arcCapitalContracts.longTermVault, arcCapitalContracts.longTermVaultV2]
         : source === "marketplace"
           ? [arcCapitalContracts.marketplace, arcCapitalContracts.marketplaceV2]
+          : source === "vaultFactory"
+            ? [arcCapitalContracts.vaultFactory]
+            : source === "dealFactory"
+              ? [arcCapitalContracts.dealFactory]
+              : source === "yieldRouter"
+                ? [arcCapitalContracts.yieldRouter]
+                : source === "navOracle"
+                  ? [arcCapitalContracts.navOracle]
           : [];
   return addresses.filter(isConfiguredAddress);
 }
