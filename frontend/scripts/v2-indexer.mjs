@@ -13,7 +13,7 @@ const FROM_BLOCK = BigInt(process.env.V2_INDEXER_FROM_BLOCK ?? "0");
 const TO_BLOCK = process.env.V2_INDEXER_TO_BLOCK ? BigInt(process.env.V2_INDEXER_TO_BLOCK) : undefined;
 const CHUNK_SIZE = BigInt(process.env.V2_INDEXER_CHUNK_SIZE ?? "1000");
 const USDC_DECIMAL_SCALE = BigInt(1_000_000);
-const SHARE_DECIMAL_SCALE = BigInt(1_000_000_000_000_000_000);
+const SHARE_DECIMAL_SCALE = BigInt(1_000_000);
 
 const arcTestnet = {
   id: ARC_TESTNET_CHAIN_ID,
@@ -171,7 +171,7 @@ function sharesFromRaw(value) {
   if (typeof value !== "bigint") return value;
   const whole = value / SHARE_DECIMAL_SCALE;
   const fraction = value % SHARE_DECIMAL_SCALE;
-  return `${whole.toString()}.${fraction.toString().padStart(18, "0").replace(/0+$/, "") || "0"}`;
+  return `${whole.toString()}.${fraction.toString().padStart(6, "0").replace(/0+$/, "") || "0"}`;
 }
 
 function minBigInt(a, b) {

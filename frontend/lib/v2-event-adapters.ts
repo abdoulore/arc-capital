@@ -4,7 +4,7 @@ import { type V2IndexedEventInput } from "./v2-store";
 import { ARC_TESTNET_CHAIN_ID } from "./arc";
 
 const USDC_DECIMAL_SCALE = BigInt(1_000_000);
-const SHARE_DECIMAL_SCALE = BigInt(1_000_000_000_000_000_000);
+const SHARE_DECIMAL_SCALE = BigInt(1_000_000);
 
 const EVENT_DEFINITIONS = [
   {
@@ -337,7 +337,7 @@ function sharesFromRaw(value: unknown) {
   if (typeof value !== "bigint") return value;
   const whole = value / SHARE_DECIMAL_SCALE;
   const fraction = value % SHARE_DECIMAL_SCALE;
-  return `${whole.toString()}.${fraction.toString().padStart(18, "0").replace(/0+$/, "") || "0"}`;
+  return `${whole.toString()}.${fraction.toString().padStart(6, "0").replace(/0+$/, "") || "0"}`;
 }
 
 function serializeValue(value: unknown): unknown {

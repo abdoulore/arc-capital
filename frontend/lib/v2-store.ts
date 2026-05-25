@@ -132,13 +132,13 @@ export async function repairV2MonthlyShareDecimals() {
   const [activity, positions] = await Promise.all([
     pool.query(
       `update v2_monthly_vault_activity
-       set shares = shares / 1000000000000
-       where shares >= 1000000000000`,
+       set shares = shares / 1000000
+       where amount_usdc > 0 and shares / amount_usdc > 1000`,
     ),
     pool.query(
       `update v2_monthly_vault_positions
-       set shares = shares / 1000000000000
-       where shares >= 1000000000000`,
+       set shares = shares / 1000000
+       where current_value_usdc > 0 and shares / current_value_usdc > 1000`,
     ),
   ]);
 
