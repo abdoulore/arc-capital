@@ -30,9 +30,17 @@ const configuredContracts = [
 ].filter((item) => isAddressLike(item.address));
 
 const eventDefinitions = [
+  parseAbiItem("event MonthlyDeposit(address indexed user, uint256 assets, uint256 shares, uint256 pricePerShareAfter)"),
+  parseAbiItem("event MonthlyWithdrawRequested(address indexed user, uint256 indexed requestId, uint256 shares, uint256 grossAssets, uint256 requestTime)"),
+  parseAbiItem("event MonthlyWithdrawExecuted(address indexed user, uint256 indexed requestId, uint256 shares, uint256 grossAssets, uint256 penalty, uint256 netAssets, bool inWindow)"),
+  parseAbiItem("event MonthlyYieldInjected(address indexed operator, uint256 amount, uint256 routedYieldAfter, uint256 navAfter)"),
   parseAbiItem("event Deposit(address indexed user, uint256 amount, uint256 shares)"),
   parseAbiItem("event Withdraw(address indexed user, uint256 amount)"),
   parseAbiItem("event WithdrawRequested(address indexed user, uint256 shares)"),
+  parseAbiItem("event FixedIncomePositionOpened(address indexed user, uint256 indexed positionId, uint256 principal, uint256 duration, uint256 apyBps, uint256 start, uint256 maturity)"),
+  parseAbiItem("event FixedIncomeYieldClaimed(address indexed user, uint256 indexed positionId, uint256 amount, uint256 lastClaimAfter)"),
+  parseAbiItem("event FixedIncomeRedeemed(address indexed user, uint256 indexed positionId, uint256 principal, uint256 yieldPaid)"),
+  parseAbiItem("event FixedIncomeEarlyExited(address indexed user, uint256 indexed positionId, uint256 returnedPrincipal, uint256 penalty)"),
   parseAbiItem("event Deposited(address indexed user, uint256 indexed positionId, uint256 amount, uint256 duration, uint256 apyBps)"),
   parseAbiItem("event YieldClaimed(address indexed user, uint256 indexed positionId, uint256 amount)"),
   parseAbiItem("event Redeemed(address indexed user, uint256 indexed positionId, uint256 principal)"),

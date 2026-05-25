@@ -173,7 +173,9 @@ export type CircleContractEventWebhook = {
     data?: Hex;
     logIndex?: number | string;
     blockNumber?: number | string;
+    blockHeight?: number | string;
     blockTimestamp?: string;
+    firstConfirmDate?: string;
     args?: Record<string, unknown>;
   };
   timestamp?: string;
@@ -220,21 +222,22 @@ export function normalizeCircleWebhook(body: CircleContractEventWebhook): V2Inde
   const txHash = (notification.txHash ?? notification.transactionHash) as Hex | undefined;
   if (!txHash) return [];
 
-  const definition = findDefinitionForCircleEvent(contractAddress, notification.eventName ?? notification.eventSignature);
+  const eventSignature = notification.eventName ?? notification.eventSignature;
+  const definition = findDefinitionForCircleEvent(contractAddress, eventSignature);
   const base = {
     chainId: ARC_TESTNET_CHAIN_ID,
     contractAddress,
     txHash,
-    logIndex: Number(notification.logIndex ?? 0),
-    blockNumber: notification.blockNumber ?? "0",
-    blockTimestamp: notification.blockTimestamp ?? body.timestamp,
+    logIndex: normalizedLogIndex(notification),
+    blockNumber: notification.blockNumber ?? notification.blockHeight ?? "0",
+    blockTimestamp: notification.blockTimestamp ?? notification.firstConfirmDate ?? body.timestamp,
   };
 
   if (notification.args) {
     return [
       {
         ...base,
-        eventName: cleanCircleEventName(notification.eventName ?? notification.eventSignature ?? "Unknown"),
+        eventName: cleanCircleEventName(eventSignature ?? "Unknown"),
         actorWallet: inferActor(notification.args),
         payload: normalizePayload(notification.args, definition?.source),
       },
@@ -245,7 +248,7 @@ export function normalizeCircleWebhook(body: CircleContractEventWebhook): V2Inde
     return [
       {
         ...base,
-        eventName: cleanCircleEventName(notification.eventName ?? notification.eventSignature ?? "Unknown"),
+        eventName: cleanCircleEventName(eventSignature ?? "Unknown"),
         payload: { rawTopics: notification.topics ?? [], rawData: notification.data ?? "0x" },
       },
     ];
@@ -284,6 +287,18 @@ function cleanCircleEventName(eventNameOrSignature: string) {
   return eventNameOrSignature.split("(")[0] || eventNameOrSignature;
 }
 
+function normalizedLogIndex(notification: NonNullable<CircleContractEventWebhook["notification"]>) {
+  if (notification.logIndex !== undefined && notification.logIndex !== null) {
+    const parsed = Number(notification.logIndex);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  const topic = notification.topics?.[0] ?? notification.eventName ?? notification.eventSignature ?? "0";
+  const hex = topic.startsWith("0x") ? topic.slice(-6) : Buffer.from(topic).toString("hex").slice(-6);
+  const parsed = Number.parseInt(hex || "0", 16);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function inferActor(args: unknown) {
   if (!args || typeof args !== "object") return undefined;
   const record = args as Record<string, unknown>;
@@ -296,7 +311,15 @@ function normalizePayload(args: unknown, source?: string) {
     Object.entries({
       ...record,
       source,
-      amountUsdc: decimalFromRaw(record.amount ?? record.assets ?? record.principal ?? record.totalPrice ?? record.returnedPrincipal),
+      amountUsdc: decimalFromRaw(
+        record.amount ??
+          record.assets ??
+          record.netAssets ??
+          record.grossAssets ??
+          record.principal ??
+          record.totalPrice ??
+          record.returnedPrincipal,
+      ),
     }).map(([key, value]) => [key, serializeValue(value)]),
   );
 }

@@ -43,6 +43,88 @@ export async function getV2BackendStatus() {
   };
 }
 
+export async function getV2IndexerDebug() {
+  const pool = await getV2Pool();
+  if (!pool) {
+    return {
+      status: "pending" as V2DataStatus,
+      message: "PostgreSQL is not connected.",
+      recentEvents: [],
+      monthlyActivity: [],
+      counts: null,
+    };
+  }
+
+  const [counts, recentEvents, monthlyActivity] = await Promise.all([
+    one<{
+      contract_events: string;
+      monthly_activity: string;
+      monthly_positions: string;
+    }>(
+      pool,
+      `select
+         (select count(*) from v2_contract_events)::text as contract_events,
+         (select count(*) from v2_monthly_vault_activity)::text as monthly_activity,
+         (select count(*) from v2_monthly_vault_positions)::text as monthly_positions`,
+    ),
+    many<{
+      event_name: string;
+      contract_address: string;
+      tx_hash: string;
+      log_index: number;
+      block_number: string;
+      actor_wallet: string | null;
+      indexed_at: Date;
+    }>(
+      pool,
+      `select event_name, contract_address, tx_hash, log_index, block_number::text, actor_wallet, indexed_at
+       from v2_contract_events
+       order by indexed_at desc
+       limit 20`,
+    ),
+    many<{
+      activity_type: string;
+      wallet: string;
+      amount_usdc: string;
+      shares: string;
+      tx_hash: string;
+      occurred_at: Date;
+    }>(
+      pool,
+      `select activity_type, wallet, amount_usdc, shares, tx_hash, occurred_at
+       from v2_monthly_vault_activity
+       order by occurred_at desc
+       limit 20`,
+    ),
+  ]);
+
+  return {
+    status: "live" as V2DataStatus,
+    counts: {
+      contractEvents: Number(counts?.contract_events ?? 0),
+      monthlyActivity: Number(counts?.monthly_activity ?? 0),
+      monthlyPositions: Number(counts?.monthly_positions ?? 0),
+    },
+    recentEvents: recentEvents.map((event) => ({
+      eventName: event.event_name,
+      contractAddress: event.contract_address,
+      txHash: event.tx_hash,
+      logIndex: event.log_index,
+      blockNumber: event.block_number,
+      actorWallet: event.actor_wallet,
+      indexedAt: event.indexed_at.toISOString(),
+    })),
+    monthlyActivity: monthlyActivity.map((activity) => ({
+      type: activity.activity_type,
+      wallet: activity.wallet,
+      amountUsdc: activity.amount_usdc,
+      shares: activity.shares,
+      txHash: activity.tx_hash,
+      occurredAt: activity.occurred_at.toISOString(),
+    })),
+  };
+}
+
 export async function ingestV2Events(events: V2IndexedEventInput[]) {
   const pool = await getV2Pool();
   if (!pool) {

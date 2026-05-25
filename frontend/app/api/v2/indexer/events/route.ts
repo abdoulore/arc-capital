@@ -9,7 +9,8 @@ type EventRequestBody = {
 
 export async function POST(request: NextRequest) {
   const secret = process.env.INDEXER_WEBHOOK_SECRET;
-  if (secret && request.headers.get("x-indexer-secret") !== secret) {
+  const providedSecret = request.headers.get("x-indexer-secret") ?? request.nextUrl.searchParams.get("secret");
+  if (secret && providedSecret !== secret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
