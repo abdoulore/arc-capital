@@ -89,8 +89,8 @@ export default function AdminLongTermPage() {
                 onClick={() => chooseDuration(option.seconds)}
                 className={`rounded-md border px-3 py-2 text-sm font-semibold ${
                   selectedDuration === option.seconds
-                    ? "border-blue-600 bg-blue-600 text-white"
-                    : "border-[var(--line)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                    ? "border-[var(--accent)] text-[var(--foreground)]"
+                    : "border-white/[0.08] text-[var(--muted)] hover:text-[var(--foreground)]"
                 }`}
               >
                 {option.label}

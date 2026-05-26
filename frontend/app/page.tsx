@@ -1,243 +1,184 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
-import { AllocationPieChart } from "@/components/charts";
-import { formatTokenAmount } from "@/lib/utils";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { formatCurrency } from "@/lib/utils";
 
-type V2Dashboard = {
+type MonthlyVaultResponse = {
   status: "live" | "pending";
-  totalPortfolioValue: string;
-  availableIncome: string;
-  walletCash: string;
-  allocation: Array<{ label: string; valueUsdc: string }>;
-  lastUpdated: string | null;
-  activity: Array<{
-    id: string;
-    action: string;
-    valueUsdc?: string;
-    shares?: string;
-    txHash?: string;
-    timestamp?: string;
-  }>;
+  summary: {
+    nav_usdc?: string;
+    liquidity_usdc?: string;
+  } | null;
 };
 
-const EMPTY_DASHBOARD: V2Dashboard = {
-  status: "pending",
-  totalPortfolioValue: "0",
-  availableIncome: "0",
-  walletCash: "0",
-  allocation: [],
-  lastUpdated: null,
-  activity: [],
-};
-
-export default function DashboardPage() {
-  const router = useRouter();
-  const { address, isConnected, status } = useAccount();
-  const [mounted, setMounted] = useState(false);
-  const [dashboard, setDashboard] = useState<V2Dashboard>(EMPTY_DASHBOARD);
-  const [error, setError] = useState<string | null>(null);
+export default function LandingPage() {
+  const [monthlyVault, setMonthlyVault] = useState<MonthlyVaultResponse | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted || status === "connecting" || status === "reconnecting") return;
-    if (!isConnected) router.replace("/vaults");
-  }, [isConnected, mounted, router, status]);
-
-  useEffect(() => {
-    if (!address) return;
     let cancelled = false;
-
-    async function loadDashboard() {
-      try {
-        const response = await fetch(`/api/v2/dashboard?wallet=${address}`, { cache: "no-store" });
-        if (!response.ok) throw new Error("Dashboard data unavailable.");
-        const next = (await response.json()) as V2Dashboard;
-        if (!cancelled) {
-          setDashboard(next);
-          setError(null);
-        }
-      } catch {
-        if (!cancelled) {
-          setDashboard(EMPTY_DASHBOARD);
-          setError("Dashboard data unavailable.");
-        }
-      }
-    }
-
-    loadDashboard();
-    const interval = window.setInterval(loadDashboard, 10000);
-    window.addEventListener("arc:data-refresh", loadDashboard);
+    fetch("/api/v2/vaults/monthly", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!cancelled) setMonthlyVault(data);
+      })
+      .catch(() => {
+        if (!cancelled) setMonthlyVault(null);
+      });
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
-      window.removeEventListener("arc:data-refresh", loadDashboard);
     };
-  }, [address]);
+  }, []);
 
-  const allocations = useMemo(
-    () =>
-      dashboard.allocation.map((item) => ({
-        label: item.label,
-        value: decimalUsdcToRaw(item.valueUsdc),
-        detail: allocationDetail(item.label),
-      })),
-    [dashboard.allocation],
-  );
-
-  const hasPortfolioData =
-    decimalUsdcToRaw(dashboard.totalPortfolioValue) > BigInt(0) ||
-    decimalUsdcToRaw(dashboard.availableIncome) > BigInt(0) ||
-    decimalUsdcToRaw(dashboard.walletCash) > BigInt(0) ||
-    dashboard.allocation.length > 0 ||
-    dashboard.activity.length > 0;
-
-  if (!mounted || status === "connecting" || status === "reconnecting" || !isConnected) return null;
+  const tvl = monthlyVault?.summary?.nav_usdc;
 
   return (
-    <div>
-      <section className="relative mb-10 overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.02] px-6 py-10 shadow-[0_30px_90px_rgba(0,0,0,0.32)] sm:px-10 lg:px-14">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_35%,rgba(124,92,255,0.22),transparent_24%),radial-gradient(circle_at_60%_30%,rgba(77,141,255,0.14),transparent_28%)]" />
-        <div className="relative">
-          <p className="text-sm font-semibold uppercase text-blue-300">Private banking, onchain</p>
-          <h1 className="mt-5 text-5xl font-semibold tracking-normal text-white">Capital Overview</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
-            An executive snapshot of available cash, invested capital, and income currently available.
+    <div className="-mt-12 w-full max-w-full overflow-hidden">
+      <section className="border-b border-white/[0.08] py-24 sm:py-32">
+        <div className="max-w-4xl">
+          <p className="mono-label flex items-center gap-4 text-[11px] text-[var(--accent)] before:h-px before:w-6 before:bg-[var(--accent)]">
+            Private banking, onchain
           </p>
-        </div>
-      </section>
-
-      {error ? (
-        <div className="mb-5 rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4 text-sm text-amber-100">
-          {error}
-        </div>
-      ) : null}
-
-      {!hasPortfolioData ? (
-        <div className="mb-5 rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm text-blue-100">
-          <p className="font-semibold">No Activity Yet</p>
-          <p className="mt-1 text-blue-200">
-            Fund this wallet with Arc Testnet USDC, then deposit into a vault or invest in a deal.
+          <h1 className="mt-10 max-w-4xl break-words text-4xl leading-[1.04] text-[var(--foreground)] sm:text-6xl lg:text-7xl">
+            Real-world yield,{" "}
+            <span className="italic text-[var(--accent)]">without the gatekeepers.</span>
+          </h1>
+          <p className="mt-10 max-w-full text-base font-light leading-8 text-[rgba(232,228,220,0.5)] sm:max-w-2xl sm:text-lg">
+            Arc Capital brings institutional-grade fixed income to onchain investors. Flexible liquidity windows.
+            Long-term fixed returns. Non-custodial throughout.
           </p>
+          <div className="mt-12 flex flex-wrap items-center gap-5">
+            <Link href="/vaults" className="arc-button-filled mono-label rounded-md px-6 py-3 text-xs transition hover:opacity-90">
+              Enter app
+            </Link>
+            <Link href="#products" className="mono-label text-xs text-[var(--muted)] transition hover:text-[var(--foreground)]">
+              {"Read the docs ->"}
+            </Link>
+          </div>
         </div>
-      ) : null}
 
-      <section className="grid gap-5 md:grid-cols-3">
-        <DashboardMetricCard
-          label="Portfolio value"
-          value={formatTokenAmount(decimalUsdcToRaw(dashboard.totalPortfolioValue), 6, "USDC", 2)}
-          detail="Cash plus indexed positions"
-          tone="violet"
-        />
-        <DashboardMetricCard
-          label="Available income"
-          value={formatTokenAmount(decimalUsdcToRaw(dashboard.availableIncome), 6, "USDC", 2)}
-          detail="Claimable fixed-income and deal revenue"
-          tone="emerald"
-        />
-        <DashboardMetricCard
-          label="Wallet cash"
-          value={formatTokenAmount(decimalUsdcToRaw(dashboard.walletCash), 6, "USDC", 2)}
-          detail="USDC currently in wallet"
-          tone="blue"
-        />
+        <div className="mt-24 grid border-y border-white/[0.08] sm:grid-cols-3">
+          <LandingStat
+            value={tvl ? formatCurrency(Number(tvl)) : undefined}
+            label="Total vault liquidity"
+          />
+          <LandingStat value={undefined} label="Current fixed APY" />
+          <LandingStat value="100%" label="Non-custodial" isLast />
+        </div>
       </section>
 
-      <section className="mt-6">
-        <AllocationPieChart allocations={allocations} />
+      <section id="products" className="border-b border-white/[0.08] py-24">
+        <p className="mono-label text-[11px] text-[var(--accent)]">Products</p>
+        <h2 className="mt-12 break-words text-3xl leading-tight sm:text-5xl">Two ways to earn. One infrastructure.</h2>
+
+        <div className="mt-16 grid border border-white/[0.08] lg:grid-cols-2">
+          <ProductCard
+            tag="Liquid"
+            title="Monthly RWA Vault"
+            description="Flexible access to real-world yield with monthly liquidity windows. Deposit and withdraw on your schedule."
+            metrics={[
+              ["Monthly", "Liquidity window"],
+              ["RWA", "Collateral type"],
+            ]}
+            href="/vaults"
+            cta="Access vault"
+          />
+          <ProductCard
+            tag="Fixed"
+            title="Long-Term Fixed Income"
+            description="Lock capital for 1-3 years and earn a fixed APY paid monthly. Principal returned at maturity."
+            metrics={[
+              ["1-3 yr", "Lock duration"],
+              ["Monthly", "Payout cadence"],
+            ]}
+            href="/vaults"
+            cta="View terms"
+            withDivider
+          />
+        </div>
       </section>
+
+      <section id="principles" className="grid gap-12 border-b border-white/[0.08] py-24 lg:grid-cols-[0.95fr_1fr] lg:items-center">
+        <div>
+          <h2 className="max-w-xl break-words text-3xl leading-tight sm:text-5xl">
+            Built for capital that <span className="italic text-[var(--accent)]">demands more.</span>
+          </h2>
+          <p className="mt-10 max-w-xl text-lg font-light leading-8 text-[rgba(232,228,220,0.5)]">
+            Traditional private credit is opaque, illiquid, and often reserved for institutions. Arc brings the same yield
+            to verifiable onchain infrastructure, with full transparency and no custody risk.
+          </p>
+          <Link href="/vaults" className="arc-button-outline mono-label mt-14 inline-flex rounded-md px-6 py-3 text-xs transition">
+            Start earning
+          </Link>
+        </div>
+
+        <div className="space-y-8">
+          <Principle number="01" title="Non-custodial by design" description="Your assets never leave your control. Smart contract infrastructure, transparent by default." />
+          <Principle number="02" title="Real-world collateral" description="Yield is generated from verified RWA positions, not token emissions or circular lending." />
+          <Principle number="03" title="Institutional-grade terms" description="Fixed APY, defined maturity dates, structured liquidity windows. No guessing." />
+        </div>
+      </section>
+
+      <footer className="flex flex-col justify-between gap-4 py-10 text-[var(--muted)] sm:flex-row">
+        <p className="font-display text-xl">Arc Capital</p>
+        <p className="mono-label text-[10px]">Private banking, onchain - © 2026</p>
+      </footer>
     </div>
   );
 }
 
-function DashboardMetricCard({
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  tone: "violet" | "emerald" | "blue";
-}) {
-  const palette = {
-    violet: "border-violet-400/25 shadow-violet-950/30 text-violet-300 bg-violet-500/10",
-    emerald: "border-emerald-400/20 shadow-emerald-950/20 text-emerald-300 bg-emerald-500/10",
-    blue: "border-blue-400/20 shadow-blue-950/20 text-blue-300 bg-blue-500/10",
-  }[tone];
-
+function LandingStat({ value, label, isLast }: { value?: string; label: string; isLast?: boolean }) {
   return (
-    <article className={`relative overflow-hidden rounded-2xl border bg-white/[0.035] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.28)] ${palette}`}>
-      <div className="relative z-10 flex items-start gap-5">
-        <div className={`grid h-16 w-16 place-items-center rounded-2xl border ${palette}`}>
-          <MetricIcon label={label} />
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="text-base text-slate-300">{label}</p>
-            <span className="grid h-4 w-4 place-items-center rounded-full border border-white/20 text-[10px] text-slate-400" title={detail}>
-              i
-            </span>
+    <div className={`px-8 py-8 ${isLast ? "" : "border-b border-white/[0.08] sm:border-b-0 sm:border-r"}`}>
+      {value ? <p className="font-display text-4xl">{value}</p> : <div className="skeleton h-10 w-36" />}
+      <p className="mono-label mt-3 text-[10px] text-[var(--muted)]">{label}</p>
+    </div>
+  );
+}
+
+function ProductCard({
+  tag,
+  title,
+  description,
+  metrics,
+  href,
+  cta,
+  withDivider,
+}: {
+  tag: string;
+  title: string;
+  description: string;
+  metrics: Array<[string, string]>;
+  href: string;
+  cta: string;
+  withDivider?: boolean;
+}) {
+  return (
+    <article className={`p-10 sm:p-14 ${withDivider ? "border-t border-white/[0.08] lg:border-l lg:border-t-0" : ""}`}>
+      <span className="mono-label inline-flex border border-white/[0.16] px-3 py-1 text-[9px] text-[var(--muted)]">{tag}</span>
+      <h3 className="mt-9 break-words text-3xl">{title}</h3>
+      <p className="mt-5 max-w-md text-base font-light leading-7 text-[rgba(232,228,220,0.5)]">{description}</p>
+      <div className="mt-10 grid max-w-md grid-cols-2 border-t border-white/[0.08] pt-8">
+        {metrics.map(([value, label]) => (
+          <div key={label}>
+            <p className="font-display text-2xl">{value}</p>
+            <p className="mono-label mt-2 text-[9px] text-[var(--muted)]">{label}</p>
           </div>
-          <p className="mt-4 text-3xl font-semibold text-white">{value}</p>
-        </div>
+        ))}
       </div>
+      <Link href={href} className="mono-label mt-10 inline-flex text-[11px] text-[var(--muted)] transition hover:text-[var(--foreground)]">
+        {`${cta} ->`}
+      </Link>
     </article>
   );
 }
 
-function MetricIcon({ label }: { label: string }) {
-  if (label === "Portfolio value") {
-    return (
-      <span className="relative h-7 w-7">
-        <span className="absolute bottom-0 left-0 h-2 w-1.5 rounded-sm bg-current" />
-        <span className="absolute bottom-0 left-2.5 h-4 w-1.5 rounded-sm bg-current" />
-        <span className="absolute bottom-0 left-5 h-6 w-1.5 rounded-sm bg-current" />
-        <span className="absolute right-0 top-0 h-3 w-3 border-r-2 border-t-2 border-current" />
-      </span>
-    );
-  }
-
-  if (label === "Available income") {
-    return (
-      <span className="relative h-7 w-7">
-        <span className="absolute inset-1 rounded-md border-2 border-current" />
-        <span className="absolute inset-2.5 rounded-sm bg-current" />
-      </span>
-    );
-  }
-
+function Principle({ number, title, description }: { number: string; title: string; description: string }) {
   return (
-    <span className="relative h-7 w-7">
-      <span className="absolute inset-x-1 bottom-1 h-4 rounded-md border-2 border-current" />
-      <span className="absolute left-2 top-1 h-4 w-5 rounded-md border-2 border-current" />
-      <span className="absolute right-1.5 top-4 h-1.5 w-1.5 rounded-full bg-current" />
-    </span>
+    <article className="border border-white/[0.08] p-8">
+      <p className="mono-label text-[9px] text-[var(--accent)]">{number}</p>
+      <h3 className="mt-4 font-sans text-lg font-light">{title}</h3>
+      <p className="mt-3 max-w-md text-sm font-light leading-6 text-[rgba(232,228,220,0.5)]">{description}</p>
+    </article>
   );
-}
-
-function allocationDetail(label: string) {
-  if (label === "Wallet USDC") return "Available balance";
-  if (label === "Monthly Vault") return "Live vault shares";
-  if (label === "Fixed Income") return "Fixed-income principal and claimable yield";
-  if (label === "Deal Holdings") return "Private deal ownership value";
-  return "Indexed allocation";
-}
-
-function decimalUsdcToRaw(value?: string | null) {
-  if (!value) return BigInt(0);
-  const [wholeRaw, fractionRaw = ""] = value.split(".");
-  const whole = wholeRaw.replace(/[^\d-]/g, "") || "0";
-  const fraction = fractionRaw.replace(/\D/g, "").padEnd(6, "0").slice(0, 6);
-  try {
-    return BigInt(whole) * BigInt(1_000_000) + BigInt(fraction || "0");
-  } catch {
-    return BigInt(0);
-  }
 }

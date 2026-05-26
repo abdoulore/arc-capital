@@ -1,9 +1,9 @@
 export function SectionHeader({ title, eyebrow, description }: { title: string; eyebrow?: string; description?: string }) {
   return (
-    <div className="mb-6">
-      {eyebrow ? <p className="text-sm font-medium uppercase tracking-normal text-blue-600 dark:text-blue-400">{eyebrow}</p> : null}
-      <h1 className="mt-2 text-3xl font-semibold tracking-normal">{title}</h1>
-      {description ? <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">{description}</p> : null}
+    <div className="mb-10">
+      {eyebrow ? <p className="mono-label text-[10px] text-[var(--accent)]">{eyebrow}</p> : null}
+      <h1 className="mt-4 max-w-4xl break-words text-3xl leading-tight sm:text-5xl">{title}</h1>
+      {description ? <p className="mt-4 max-w-3xl text-sm font-light leading-7 text-[var(--muted)]">{description}</p> : null}
     </div>
   );
 }

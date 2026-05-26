@@ -119,22 +119,22 @@ export default function VaultsPage() {
         description=""
       />
 
-      <section className="grid gap-4 lg:grid-cols-[1.35fr_0.75fr]">
-          <div className="flex min-h-[280px] flex-col justify-between rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+      <section className="grid gap-0 border border-white/[0.08] lg:grid-cols-[1.35fr_0.75fr]">
+          <div className="flex min-h-[360px] flex-col justify-between border-b border-white/[0.08] bg-transparent p-8 lg:border-b-0 lg:border-r">
             <div>
               <div className="flex flex-wrap items-start gap-3">
-                <div className="grid h-11 w-11 place-items-center rounded-xl border border-blue-400/20 bg-blue-500/15 font-semibold text-blue-100 shadow-[0_0_24px_rgba(47,91,255,0.18)]">
+                <div className="grid h-11 w-11 place-items-center rounded-sm border border-white/[0.12] bg-transparent font-mono text-[var(--foreground)]">
                   <span className="text-sm">|||</span>
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="text-xl font-semibold tracking-tight text-white">Monthly RWA Vault</h2>
-                    <span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold text-emerald-300">
-                      <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    <h2 className="text-2xl leading-none text-[var(--foreground)] sm:text-3xl">Monthly RWA Vault</h2>
+                    <span className="inline-flex items-center rounded-full border border-[var(--accent)]/30 bg-transparent px-3 py-1 text-xs font-medium text-[var(--accent)]">
+                      <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
                       Liquid
                     </span>
                   </div>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+                  <p className="mt-3 max-w-xl text-sm font-light leading-6 text-[var(--muted)]">
                     Flexible access to real-world yield with monthly liquidity windows.
                   </p>
                 </div>
@@ -144,29 +144,29 @@ export default function VaultsPage() {
                 {walletConnected ? (
                   <>
                     <div className="flex items-center gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Your balance</p>
+                      <p className="mono-label text-[10px] text-[var(--muted)]">Your balance</p>
                       <span
                         title="Your current vault share value based on live share price."
                         aria-label="Your current vault share value based on live share price."
-                        className="grid h-4 w-4 place-items-center rounded-full border border-white/15 text-[10px] font-semibold text-slate-400"
+                        className="grid h-4 w-4 place-items-center rounded-full border border-white/15 text-[10px] font-semibold text-[var(--muted)]"
                       >
                         i
                       </span>
                     </div>
-                    <p className="mt-3 text-4xl font-semibold tracking-tight text-white">
-                      {hasShares ? formatCurrency(shareValue) : "Awaiting Live Data"}
+                    <p className="mt-3 text-5xl font-light tracking-tight text-[var(--foreground)]">
+                      {hasShares ? formatCurrency(shareValue) : <PendingSkeleton className="h-12 w-48" />}
                     </p>
-                    <p className="mt-1 text-sm text-slate-400">
+                    <p className="mt-3 text-sm text-[var(--muted)]">
                       {hasShares ? formatTokenAmount(shares, SHARE_DECIMALS, "shares", 4) : "Wallet position pending"}
                     </p>
                   </>
                 ) : (
                   <div className="mx-auto flex max-w-xl flex-col items-center py-4 text-center">
-                    <div className="grid h-16 w-16 place-items-center rounded-full border border-blue-400/20 bg-blue-500/10 text-2xl font-semibold text-blue-300">
+                    <div className="grid h-16 w-16 place-items-center rounded-full border border-white/[0.12] bg-transparent text-2xl font-light text-[var(--accent)]">
                       +
                     </div>
-                    <p className="mt-5 text-2xl font-semibold leading-9 text-white">Connect your wallet to access deposits, withdrawals, and vault positions.</p>
-                    <p className="mt-3 text-sm text-slate-400">Your funds remain non-custodial and secure.</p>
+                    <p className="mt-5 max-w-lg text-2xl leading-9 text-[var(--foreground)] sm:text-3xl sm:leading-10">Connect your wallet to access deposits, withdrawals, and vault positions.</p>
+                    <p className="mt-3 text-sm text-[var(--muted)]">Your funds remain non-custodial and secure.</p>
                   </div>
                 )}
               </div>
@@ -177,26 +177,26 @@ export default function VaultsPage() {
                 <>
                   <WalletGatedButton
                     onClick={() => setDepositOpen(true)}
-                    className="flex-1 rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(37,99,235,0.25)] transition hover:bg-blue-500"
+                    className="arc-button-filled flex-1 rounded-md px-4 py-3 text-sm font-medium transition"
                   >
                     Deposit
                   </WalletGatedButton>
                   <WalletGatedButton
                     onClick={() => setWithdrawOpen(true)}
-                    className="flex-1 rounded-md border border-white/15 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.07]"
+                    className="arc-button-outline flex-1 rounded-md px-4 py-3 text-sm font-medium transition"
                   >
                     Withdraw
                   </WalletGatedButton>
                 </>
               ) : (
-                <WalletGatedButton className="mx-auto w-full max-w-md rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(37,99,235,0.25)] transition hover:bg-blue-500">
+                <WalletGatedButton className="arc-button-outline mx-auto w-full max-w-md rounded-md px-4 py-3 text-sm font-medium transition">
                   Connect Wallet
                 </WalletGatedButton>
               )}
             </div>
           </div>
 
-          <div className="min-h-[280px] rounded-lg border border-[var(--line)] bg-[var(--panel)] px-5 py-4 shadow-sm">
+          <div className="min-h-[360px] bg-transparent px-8 py-6">
             <VaultInfoRow
               icon="[]"
               label="Withdrawal window"
@@ -207,7 +207,8 @@ export default function VaultsPage() {
             <VaultInfoRow
               icon="|||"
               label="Vault liquidity"
-              value={hasTotalAssets ? formatTokenAmount(totalAssets, USDC_DECIMALS, "USDC", 2) : "Awaiting Live Data"}
+              value={hasTotalAssets ? formatTokenAmount(totalAssets, USDC_DECIMALS, "USDC", 2) : ""}
+              pending={!hasTotalAssets}
               detail="Live onchain vault assets"
               isLast
             />
@@ -215,8 +216,8 @@ export default function VaultsPage() {
       </section>
 
       <section className="mt-6">
-        <h2 className="mb-4 text-xl font-semibold">Long-term fixed income</h2>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+        <h2 className="mb-5 text-3xl leading-tight">Long-term fixed income</h2>
+        <div className="border border-white/[0.08] bg-transparent p-8">
           <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
             <div>
               <label className="text-sm font-medium text-[var(--muted)]" htmlFor="fixed-income-amount">
@@ -227,14 +228,14 @@ export default function VaultsPage() {
                 value={fixedAmount}
                 onChange={(event) => setFixedAmount(event.target.value)}
                 disabled={!walletConnected}
-                className="mt-2 w-full rounded-md border border-[var(--line)] bg-transparent px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[var(--muted)] dark:disabled:bg-slate-900"
+                className="mt-2 w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 text-lg font-light outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder={walletConnected ? "USDC amount" : "Awaiting wallet connection"}
               />
 
               <div className="mt-5">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-sm font-medium text-[var(--muted)]">Lock duration</p>
-                  <p className="text-sm font-semibold">{selectedFixedOption.duration}</p>
+                  <p className="mono-label text-[10px] text-[var(--foreground)]">{selectedFixedOption.duration}</p>
                 </div>
                 <input
                   type="range"
@@ -244,7 +245,7 @@ export default function VaultsPage() {
                   value={selectedDurationIndex}
                   onChange={(event) => setSelectedDurationIndex(Number(event.target.value))}
                   disabled={!walletConnected}
-                  className="w-full accent-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
                   aria-label="Select lock duration"
                 />
                 <div className="mt-3 grid grid-cols-3 gap-2">
@@ -254,10 +255,10 @@ export default function VaultsPage() {
                       type="button"
                       onClick={() => setSelectedDurationIndex(index)}
                       disabled={!walletConnected}
-                      className={`rounded-md border px-3 py-2 text-sm font-medium transition ${
+                      className={`rounded-none border px-3 py-2 text-sm font-light transition ${
                         selectedDurationIndex === index
-                          ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200"
-                          : "border-[var(--line)] text-[var(--muted)] hover:bg-slate-50 dark:hover:bg-slate-900"
+                          ? "border-[var(--accent)] bg-transparent text-[var(--foreground)]"
+                          : "border-[var(--line)] text-[var(--muted)] hover:border-white/20"
                       }`}
                     >
                       {option.duration}
@@ -269,9 +270,9 @@ export default function VaultsPage() {
               <p className="mt-5 text-sm text-[var(--muted)]">Early withdrawals may reduce returns</p>
             </div>
 
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 text-[var(--foreground)] shadow-sm">
+            <div className="border border-white/[0.08] bg-transparent p-6 text-[var(--foreground)]">
               <p className="text-sm text-[var(--muted)]">Fixed APY</p>
-              <p className="mt-2 text-4xl font-semibold text-emerald-600 dark:text-emerald-300">{selectedFixedOption.apy === undefined ? "Awaiting Live Data" : formatPercent(selectedFixedOption.apy)}</p>
+              <div className="mt-2 text-5xl text-[var(--accent)]">{selectedFixedOption.apy === undefined ? <PendingSkeleton className="h-12 w-44" /> : formatPercent(selectedFixedOption.apy)}</div>
               <p className="mt-2 text-sm text-[var(--muted)]">{selectedFixedOption.description}</p>
 
               <div className="mt-5 space-y-3 text-sm">
@@ -287,7 +288,7 @@ export default function VaultsPage() {
                   if (ok) setFixedAmount("");
                 }}
                 disabled={!selectedFixedOption.enabled || longTermBusy}
-                className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+                className={`${walletConnected ? "arc-button-filled" : "arc-button-outline"} mt-5 w-full rounded-md px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {longTermButtonLabel}
               </WalletGatedButton>
@@ -387,7 +388,13 @@ function getWithdrawalWindow(start?: bigint, duration?: bigint, nowMs: number | 
     return { label: "Awaiting Live Data", detail: "Reading vault schedule", countdownDate: null as Date | null, nextWindowDate: null as Date | null, isOpen: false };
   }
   if (start === BigInt(0) || duration === BigInt(0)) {
-    return { label: "Not configured", detail: "Admin must set a monthly withdrawal window", countdownDate: null as Date | null, nextWindowDate: null as Date | null, isOpen: false };
+    return {
+      label: "Schedule pending",
+      detail: "Monthly withdrawal timing will appear here once live.",
+      countdownDate: null as Date | null,
+      nextWindowDate: null as Date | null,
+      isOpen: false,
+    };
   }
   if (!nowMs) {
     const startDate = new Date(Number(start) * 1000);
@@ -428,6 +435,7 @@ function VaultInfoRow({
   detail,
   tone = "blue",
   isLast,
+  pending,
 }: {
   icon: string;
   label: string;
@@ -435,25 +443,32 @@ function VaultInfoRow({
   detail: string;
   tone?: "blue" | "green";
   isLast?: boolean;
+  pending?: boolean;
 }) {
   return (
     <div className={`flex gap-4 py-3.5 ${isLast ? "" : "border-b border-[var(--line)]"}`}>
       <div
-        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border text-sm font-semibold ${
+        className={`grid h-10 w-10 shrink-0 place-items-center rounded-sm border text-sm font-light ${
           tone === "green"
-            ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
-            : "border-blue-400/20 bg-blue-500/10 text-blue-300"
+            ? "border-[var(--accent)]/30 bg-transparent text-[var(--accent)]"
+            : "border-white/[0.12] bg-transparent text-[var(--foreground)]"
         }`}
       >
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-        <p className={`mt-1 text-lg font-semibold ${tone === "green" ? "text-emerald-300" : "text-white"}`}>{value}</p>
-        <p className="mt-1 text-xs leading-5 text-slate-400">{detail}</p>
+        <p className="mono-label text-[10px] text-[var(--muted)]">{label}</p>
+        <div className={`mt-1 text-xl ${tone === "green" ? "text-[var(--accent)]" : "text-[var(--foreground)]"}`}>
+          {pending ? <PendingSkeleton className="h-6 w-32" /> : value}
+        </div>
+        <p className="mt-1 text-xs font-light leading-5 text-[var(--muted)]">{detail}</p>
       </div>
     </div>
   );
+}
+
+function PendingSkeleton({ className = "h-5 w-28" }: { className?: string }) {
+  return <span className={`skeleton inline-block align-middle ${className}`} aria-label="Awaiting Live Data" />;
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
@@ -501,7 +516,7 @@ function TransactionForm({
         onChange={(event) => onChange(event.target.value)}
         disabled={inputDisabled}
         placeholder="0.00"
-        className="w-full rounded-md border border-[var(--line)] bg-transparent px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[var(--muted)] dark:disabled:bg-slate-900"
+        className="w-full rounded-none border border-[var(--line)] bg-transparent px-4 py-3 text-lg font-light outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
       />
       <div className="mt-4 rounded-md border border-[var(--line)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
         {preview.map(([label, content, tooltip]) => (
@@ -518,7 +533,7 @@ function TransactionForm({
           </div>
         ))}
       </div>
-      {warning ? <div className="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">{warning}</div> : null}
+      {warning ? <div className="mt-3 border border-[var(--line)] p-3 text-sm font-light text-[var(--muted)]">{warning}</div> : null}
       {advanced?.length ? (
         <div className="mt-3 rounded-md border border-[var(--line)]">
           <button
@@ -544,7 +559,7 @@ function TransactionForm({
       <WalletGatedButton
         onClick={onSubmit}
         disabled={busy}
-        className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+        className="arc-button-filled mt-5 w-full rounded-md px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? "Confirming..." : status === "confirmed" ? "Confirmed" : primaryLabel}
       </WalletGatedButton>

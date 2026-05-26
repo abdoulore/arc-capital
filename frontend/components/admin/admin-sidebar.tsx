@@ -20,10 +20,10 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 shadow-sm lg:sticky lg:top-24 lg:h-fit">
+    <aside className="border border-white/[0.08] bg-transparent p-3 lg:sticky lg:top-24 lg:h-fit">
       <div className="px-3 py-2">
-        <p className="text-sm font-semibold">Operator Console</p>
-        <p className="mt-1 text-xs text-[var(--muted)]">RWA platform controls</p>
+        <p className="text-xl">Operator Console</p>
+        <p className="mt-1 text-xs font-light text-[var(--muted)]">RWA platform controls</p>
       </div>
       <nav className="mt-3 grid gap-1">
         {adminItems.map((item) => {
@@ -34,11 +34,11 @@ export function AdminSidebar() {
               href={item.href}
               prefetch={false}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-[var(--muted)] hover:bg-slate-100 hover:text-[var(--foreground)] dark:hover:bg-slate-900",
-                active && "bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950 dark:text-blue-200 dark:ring-blue-900"
+                "flex items-center gap-3 rounded-md border border-transparent px-3 py-2 text-sm text-[var(--muted)] transition hover:border-white/[0.08] hover:text-[var(--foreground)]",
+                active && "border-[var(--accent)]/35 text-[var(--foreground)]"
               )}
             >
-              <span className="grid h-6 w-6 place-items-center rounded-md bg-slate-100 text-xs dark:bg-slate-900">{item.icon}</span>
+              <span className="mono-label grid h-6 w-6 place-items-center rounded-sm border border-white/[0.08] text-[9px]">{item.icon}</span>
               {item.label}
             </Link>
           );

@@ -92,7 +92,7 @@ export default function AdminMarketplacePage() {
       />
 
       {error ? (
-        <div className="mb-5 rounded-lg border border-amber-400/25 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-100">
+        <div className="mb-5 border border-white/[0.08] bg-transparent p-4 text-sm text-[var(--muted)]">
           {error}
         </div>
       ) : null}

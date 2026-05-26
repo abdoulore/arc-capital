@@ -101,89 +101,92 @@ export default function MarketplacePage() {
       <SectionHeader
         eyebrow="Secondary market"
         title="Orderbook for private positions"
-        description="Listings are escrowed before they appear here. Fills settle atomically: USDC to seller, deal shares to buyer."
+        description="Review active listings and manage private deal orders. Yield rights follow ownership after settlement."
       />
 
       {!marketplace.address ? (
-        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
-          <p className="font-semibold">Connect Wallet</p>
-          <p className="mt-1 text-blue-800 dark:text-blue-200">
+        <div className="mb-5 border border-white/[0.08] bg-transparent p-4 text-sm text-[var(--muted)]">
+          <p className="text-lg text-[var(--foreground)]">Connect Wallet</p>
+          <p className="mt-1">
             Connect your wallet to create listings, trade deal shares, or manage your orders.
           </p>
         </div>
       ) : null}
 
-      <section className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+      <section className="border border-white/[0.08] bg-transparent p-6">
         {marketplace.transaction.status !== "idle" ? (
-          <div className="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">
+          <div className="mb-4 border border-white/[0.08] bg-transparent p-3 text-sm text-[var(--muted)]">
             {marketplace.transaction.label}
           </div>
         ) : null}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-semibold">Live orderbook</h2>
-            <p className="text-sm text-[var(--muted)]">Yield rights transfer with ownership.</p>
+            <h2 className="text-2xl">Live orderbook</h2>
+            <p className="mt-1 text-sm font-light text-[var(--muted)]">Yield rights transfer with ownership.</p>
           </div>
-          <WalletGatedButton onClick={() => setListingOpen(true)} className="rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+          <WalletGatedButton onClick={() => setListingOpen(true)} className="arc-button-outline rounded-md px-4 py-3 text-sm transition">
             Create listing
           </WalletGatedButton>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-[var(--line)] text-[var(--muted)]">
-              <tr>
-                <th className="py-3 font-medium">Deal</th>
-                <th className="py-3 font-medium">Side</th>
-                <th className="py-3 font-medium">Shares</th>
-                <th className="py-3 font-medium">Price / share</th>
-                <th className="py-3 font-medium">Volume</th>
-                <th className="py-3 font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
-              {liveRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No active listings.</td></tr> : null}
-              {liveRows.map((row) => (
-                <tr key={row.id}>
-                  <td className="py-4 font-medium">{row.deal}</td>
-                  <td className="py-4"><StatusBadge label={row.side === "Sell" ? "Liquid" : "Pending"} /></td>
-                  <td className="py-4">{formatNumber(Number(row.shares), 0)}</td>
-                  <td className="py-4">{formatTokenAmount(row.priceRaw, 6, "USDC", 2)}</td>
-                  <td className="py-4">{formatTokenAmount(row.volumeRaw, 6, "USDC", 2)}</td>
-                  <td className="py-4">
-                    <WalletGatedButton onClick={() => setSelectedListing(row)} className="rounded-md border border-[var(--line)] px-3 py-2 font-medium hover:bg-slate-50 dark:hover:bg-slate-900">
-                      Trade
-                    </WalletGatedButton>
-                  </td>
+        {liveRows.length === 0 ? (
+          <div className="border-t border-white/[0.08] py-6 text-sm text-[var(--muted)]">No active listings.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="border-b border-white/[0.08] text-[var(--muted)]">
+                <tr>
+                  <th className="mono-label py-3 text-[10px] font-normal">Deal</th>
+                  <th className="mono-label py-3 text-[10px] font-normal">Side</th>
+                  <th className="mono-label py-3 text-[10px] font-normal">Shares</th>
+                  <th className="mono-label py-3 text-[10px] font-normal">Price / share</th>
+                  <th className="mono-label py-3 text-[10px] font-normal">Volume</th>
+                  <th className="mono-label py-3 text-[10px] font-normal">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-white/[0.08]">
+                {liveRows.map((row) => (
+                  <tr key={row.id}>
+                    <td className="py-4 text-[var(--foreground)]">{row.deal}</td>
+                    <td className="py-4"><StatusBadge label={row.side === "Sell" ? "Liquid" : "Pending"} /></td>
+                    <td className="py-4">{formatNumber(Number(row.shares), 0)}</td>
+                    <td className="py-4">{formatTokenAmount(row.priceRaw, 6, "USDC", 2)}</td>
+                    <td className="py-4">{formatTokenAmount(row.volumeRaw, 6, "USDC", 2)}</td>
+                    <td className="py-4">
+                      <WalletGatedButton onClick={() => setSelectedListing(row)} className="arc-button-outline rounded-md px-3 py-2 text-sm transition">
+                        Trade
+                      </WalletGatedButton>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {marketplace.address ? (
-      <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+      <section className="mt-6 border border-white/[0.08] bg-transparent p-6">
         <div className="mb-4">
-          <h2 className="font-semibold">Your orders</h2>
-          <p className="text-sm text-[var(--muted)]">Open listings created by your connected wallet. Canceling returns unsold shares to your wallet.</p>
+          <h2 className="text-2xl">Your orders</h2>
+          <p className="mt-1 text-sm font-light text-[var(--muted)]">Open listings created by your connected wallet. Canceling returns unsold shares to your wallet.</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-[var(--line)] text-[var(--muted)]">
+            <thead className="border-b border-white/[0.08] text-[var(--muted)]">
               <tr>
-                <th className="py-3 font-medium">Deal</th>
-                <th className="py-3 font-medium">Listing</th>
-                <th className="py-3 font-medium">Remaining shares</th>
-                <th className="py-3 font-medium">Price / share</th>
-                <th className="py-3 font-medium">Volume</th>
-                <th className="py-3 font-medium">Action</th>
+                <th className="mono-label py-3 text-[10px] font-normal">Deal</th>
+                <th className="mono-label py-3 text-[10px] font-normal">Listing</th>
+                <th className="mono-label py-3 text-[10px] font-normal">Remaining shares</th>
+                <th className="mono-label py-3 text-[10px] font-normal">Price / share</th>
+                <th className="mono-label py-3 text-[10px] font-normal">Volume</th>
+                <th className="mono-label py-3 text-[10px] font-normal">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--line)]">
+            <tbody className="divide-y divide-white/[0.08]">
               {marketplace.address && yourRows.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No open orders.</td></tr> : null}
               {yourRows.map((row) => (
                 <tr key={row.id}>
-                  <td className="py-4 font-medium">{row.deal}</td>
+                  <td className="py-4 text-[var(--foreground)]">{row.deal}</td>
                   <td className="py-4">#{row.id}</td>
                   <td className="py-4">{formatNumber(Number(row.shares), 0)}</td>
                   <td className="py-4">{formatTokenAmount(row.priceRaw, 6, "USDC", 2)}</td>
@@ -195,7 +198,7 @@ export default function MarketplacePage() {
                         if (ok) refreshListings();
                       }}
                       disabled={marketplace.transaction.status === "pending"}
-                      className="rounded-md border border-red-200 px-3 py-2 font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+                      className="rounded-md border border-white/[0.18] px-3 py-2 text-sm text-[var(--foreground)] transition hover:border-white/[0.32] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Cancel
                     </button>
@@ -207,9 +210,9 @@ export default function MarketplacePage() {
         </div>
       </section>
       ) : (
-        <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
-          <h2 className="font-semibold">Your orders</h2>
-          <p className="mt-3 text-sm text-[var(--muted)]">Awaiting Live Data</p>
+        <section className="mt-6 border border-white/[0.08] bg-transparent p-6">
+          <h2 className="text-2xl">Your orders</h2>
+          <p className="mt-3 text-sm text-[var(--muted)]">Connect your wallet to view open orders.</p>
         </section>
       )}
 
@@ -217,22 +220,22 @@ export default function MarketplacePage() {
         <div>
           {!marketplace.address ? (
             <div>
-              <div className="rounded-md border border-[var(--line)] bg-slate-50 p-4 text-sm dark:bg-slate-900">
-                <p className="font-semibold text-[var(--foreground)]">Wallet required</p>
+              <div className="border border-white/[0.08] bg-transparent p-4 text-sm">
+                <p className="text-lg text-[var(--foreground)]">Wallet required</p>
                 <p className="mt-1 leading-6 text-[var(--muted)]">
                   Connect your wallet to create a marketplace listing for owned deal shares.
                 </p>
               </div>
               <WalletGatedButton
-                className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+                className="arc-button-outline mt-5 w-full rounded-md px-4 py-3 text-sm transition"
               >
                 Create listing
               </WalletGatedButton>
             </div>
           ) : dealHoldings.length === 0 ? (
             <div>
-              <div className="rounded-md border border-[var(--line)] bg-slate-50 p-4 text-sm dark:bg-slate-900">
-                <p className="font-semibold text-[var(--foreground)]">No listable deal holdings</p>
+              <div className="border border-white/[0.08] bg-transparent p-4 text-sm">
+                <p className="text-lg text-[var(--foreground)]">No listable deal holdings</p>
                 <p className="mt-1 leading-6 text-[var(--muted)]">
                   This wallet does not currently hold deal shares. Invest in a deal or receive shares before creating a listing.
                 </p>
@@ -240,7 +243,7 @@ export default function MarketplacePage() {
               <button
                 type="button"
                 disabled
-                className="mt-5 w-full cursor-not-allowed rounded-md bg-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                className="arc-button-outline mt-5 w-full cursor-not-allowed rounded-md px-4 py-3 text-sm opacity-50"
               >
                 Create listing unavailable
               </button>
@@ -257,7 +260,7 @@ export default function MarketplacePage() {
                   setSelectedDealAddress(event.target.value);
                   setFormError(null);
                 }}
-                className="mt-2 w-full rounded-md border border-[var(--line)] bg-transparent px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-2 w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 outline-none focus:border-[var(--accent)]"
               >
                 <option value="">Select deal</option>
                 {dealHoldings.map((holding) => (
@@ -271,21 +274,21 @@ export default function MarketplacePage() {
                   value={listingAmount}
                   onChange={(event) => setListingAmount(event.target.value)}
                   placeholder="Shares to sell"
-                  className="w-full rounded-md border border-[var(--line)] bg-transparent px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 outline-none focus:border-[var(--accent)]"
                 />
                 <input
                   value={listingPrice}
                   onChange={(event) => setListingPrice(event.target.value)}
                   placeholder="Price per share"
-                  className="w-full rounded-md border border-[var(--line)] bg-transparent px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 outline-none focus:border-[var(--accent)]"
                 />
               </div>
-              <div className="mt-4 rounded-md border border-[var(--line)] bg-[var(--background)] p-4 text-sm">
+              <div className="mt-4 border border-white/[0.08] bg-transparent p-4 text-sm">
                 <PreviewRow label="Escrow" value="Shares transfer to marketplace" />
                 <PreviewRow label="Settlement" value="Buyer pays USDC directly to you" />
                 <PreviewRow label="Estimated value" value={formatCurrency(Number(listingAmount || 0) * Number(listingPrice || 0))} />
               </div>
-              {formError ? <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">{formError}</p> : null}
+              {formError ? <p className="mt-3 text-sm text-[var(--accent)]">{formError}</p> : null}
               <WalletGatedButton
                 onClick={async () => {
                   const holding = dealHoldings.find((item) => item.contractAddress === selectedDealAddress);
@@ -317,7 +320,7 @@ export default function MarketplacePage() {
                   }
                 }}
                 disabled={marketplace.transaction.status === "pending"}
-                className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+                className="arc-button-filled mt-5 w-full rounded-md px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {marketplace.transaction.status === "pending" ? "Confirming..." : marketplace.transaction.status === "confirmed" ? "Confirmed" : "Create listing"}
               </WalletGatedButton>
@@ -329,7 +332,7 @@ export default function MarketplacePage() {
       <Modal title="Trade deal shares" open={Boolean(selectedListing)} onClose={() => setSelectedListing(null)}>
         {selectedListing ? (
           <div>
-            <div className="rounded-md border border-[var(--line)] bg-[var(--background)] p-4 text-sm">
+            <div className="border border-white/[0.08] bg-transparent p-4 text-sm">
               <PreviewRow label="Deal" value={selectedListing.deal} />
               <PreviewRow label="Available shares" value={formatNumber(Number(selectedListing.shares), 0)} />
               <PreviewRow label="Effective price" value={formatCurrency(selectedListing.price)} />
@@ -338,13 +341,13 @@ export default function MarketplacePage() {
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="Shares to fill"
-              className="mt-4 w-full rounded-md border border-[var(--line)] bg-transparent px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-4 w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 outline-none focus:border-[var(--accent)]"
             />
-            <div className="mt-4 rounded-md border border-[var(--line)] bg-[var(--background)] p-4 text-sm">
+            <div className="mt-4 border border-white/[0.08] bg-transparent p-4 text-sm">
               <PreviewRow label="Total cost" value={formatCurrency(totalCost)} />
               <PreviewRow label="Settlement" value="USDC for deal shares" />
             </div>
-            <div className="mt-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">
+            <div className="mt-4 border border-white/[0.08] bg-transparent p-3 text-sm text-[var(--muted)]">
               Future revenue distributions follow the shares after settlement.
             </div>
             <WalletGatedButton
@@ -364,7 +367,7 @@ export default function MarketplacePage() {
                 }
               }}
               disabled={marketplace.transaction.status === "pending"}
-              className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+              className="arc-button-filled mt-5 w-full rounded-md px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               {marketplace.transaction.status === "pending" ? "Confirming..." : marketplace.transaction.status === "confirmed" ? "Confirmed" : "Confirm trade"}
             </WalletGatedButton>
@@ -378,8 +381,8 @@ export default function MarketplacePage() {
 function PreviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4 py-2">
-      <span className="text-[var(--muted)]">{label}</span>
-      <span className="text-right font-semibold text-[var(--foreground)]">{value}</span>
+      <span className="mono-label text-[9px] text-[var(--muted)]">{label}</span>
+      <span className="text-right text-[var(--foreground)]">{value}</span>
     </div>
   );
 }

@@ -115,7 +115,7 @@ export default function AdminSettingsPage() {
               value={settings.adminWallets.join("\n")}
               onChange={(event) => setSettings({ ...settings, adminWallets: splitList(event.target.value) })}
               placeholder="0x..."
-              className="min-h-36 w-full rounded-md border border-[var(--line)] bg-transparent px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-36 w-full rounded-none border border-white/[0.08] bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[var(--accent)]"
             />
           </SettingsField>
         </AdminPanel>
@@ -126,7 +126,7 @@ export default function AdminSettingsPage() {
               value={settings.supportedNetworks.join("\n")}
               onChange={(event) => setSettings({ ...settings, supportedNetworks: splitList(event.target.value) })}
               placeholder="Arc Testnet"
-              className="min-h-24 w-full rounded-md border border-[var(--line)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-24 w-full rounded-none border border-white/[0.08] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
             />
           </SettingsField>
         </AdminPanel>

@@ -1,7 +1,7 @@
 export function ProgressBar({ value }: { value: number }) {
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-      <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
+    <div className="h-1.5 w-full overflow-hidden bg-white/[0.08]">
+      <div className="h-full bg-[var(--accent)]" style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
     </div>
   );
 }

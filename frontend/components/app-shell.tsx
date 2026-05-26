@@ -14,6 +14,7 @@ const navItems = [
   { href: "/vaults", label: "Vaults" },
   { href: "/deals", label: "Deals" },
   { href: "/marketplace", label: "Marketplace" },
+  { href: "/#principles", label: "Docs" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -21,7 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { address, chain, isConnected } = useAccount();
   const [mounted, setMounted] = useState(false);
   const userNavItems = mounted && isConnected
-    ? [{ href: "/", label: "Dashboard" }, ...navItems, { href: "/portfolio", label: "Portfolio" }]
+    ? [...navItems, { href: "/portfolio", label: "Portfolio" }]
     : navItems;
   const expectedChainId = ARC_TESTNET_CHAIN_ID;
   const networkLabel = !mounted || !address
@@ -43,21 +44,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [mounted, pathname]);
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#060b16]/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <Link href={mounted && isConnected ? "/" : "/vaults"} className="flex min-w-max items-center gap-3 pr-5 text-base font-semibold tracking-normal md:border-r md:border-white/10">
-            <span className="relative grid h-8 w-8 overflow-hidden rounded-xl border border-indigo-400/25 bg-[#050a17] shadow-[0_0_24px_rgba(37,99,235,0.28)]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[var(--background)] text-[var(--foreground)]">
+      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-transparent backdrop-blur-sm">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-5 sm:gap-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex min-w-max items-center gap-2 pr-3 text-lg font-normal tracking-normal sm:gap-3 sm:pr-5 sm:text-xl md:border-r md:border-white/[0.08]">
+            <span className="relative grid h-8 w-8 overflow-hidden rounded-sm border border-white/[0.12] bg-transparent">
               <img
                 src="/arc-capital-logo.png"
                 alt=""
-                className="h-full w-full scale-[2.55] object-cover"
+                className="h-full w-full scale-[2.6] object-cover"
                 aria-hidden="true"
               />
             </span>
-            <span>Arc Capital</span>
+            <span className="font-display">Arc Capital</span>
           </Link>
-          <nav className="flex flex-1 items-center gap-1 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <nav className="hidden flex-1 items-center justify-center gap-7 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden">
             {userNavItems.map((item) => {
               const active = pathname === item.href;
               return (
@@ -66,8 +67,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                   href={item.href}
                   prefetch={false}
                   className={cn(
-                    "relative rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-white/5 hover:text-white",
-                    active && "bg-blue-500/10 text-blue-100 ring-1 ring-blue-400/20 after:absolute after:inset-x-3 after:-bottom-2 after:h-px after:bg-blue-400"
+                    "mono-label relative whitespace-nowrap py-2 text-[11px] text-[var(--muted)] transition hover:text-[var(--foreground)]",
+                    active && "text-[var(--foreground)] after:absolute after:inset-x-0 after:-bottom-5 after:h-px after:bg-[var(--accent)]"
                   )}
                 >
                   {item.label}
@@ -75,16 +76,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               );
             })}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex min-w-0 items-center gap-2">
             <div
               className={cn(
-                "hidden items-center rounded-xl px-3 py-2 text-xs font-semibold ring-1 md:flex",
+                "mono-label hidden items-center rounded-md border border-white/[0.12] px-3 py-2 text-[10px] md:flex",
                 networkOk
-                  ? "bg-white/5 text-slate-100 ring-white/10"
-                  : "bg-white/5 text-slate-300 ring-white/10",
+                  ? "text-[var(--foreground)]"
+                  : "text-[var(--muted)]",
               )}
             >
-              <span className={cn("mr-2 inline-block h-1.5 w-1.5 rounded-full", networkOk ? "bg-emerald-400" : "bg-slate-500")} />
+              <span className={cn("mr-2 inline-block h-1.5 w-1.5 rounded-full", networkOk ? "bg-[var(--accent)]" : "bg-[var(--muted)]")} />
               {networkLabel}
             </div>
             <ConnectButton.Custom>
@@ -97,9 +98,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <button
                       type="button"
                       onClick={openConnectModal}
-                      className="rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold text-slate-100 ring-1 ring-white/10 transition hover:bg-white/10"
+                      className="arc-button-outline mono-label flex-shrink-0 rounded-md px-2.5 py-2 text-[10px] transition sm:px-4 sm:text-[11px]"
                     >
-                      Connect Wallet
+                      <span className="sm:hidden">Connect</span>
+                      <span className="hidden sm:inline">Connect Wallet</span>
                     </button>
                   );
                 }
@@ -108,10 +110,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <button
                     type="button"
                     onClick={openAccountModal}
-                    className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold text-slate-100 ring-1 ring-white/10 transition hover:bg-white/10"
+                    className="arc-button-outline flex min-w-0 flex-shrink-0 items-center gap-2 rounded-md px-2.5 py-2 text-xs transition sm:px-3"
                   >
                     <span>{account.displayBalance}</span>
-                    <span className="h-1 w-1 rounded-full bg-slate-500" />
+                    <span className="h-1 w-1 rounded-full bg-[var(--muted)]" />
                     <span>{account.displayName}</span>
                   </button>
                 );
@@ -120,7 +122,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main key={pathname} className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">{children}</main>
+      <main key={pathname} className="mx-auto w-full max-w-7xl overflow-x-hidden px-4 py-12 sm:px-6 lg:px-8">{children}</main>
       <TransactionToastHost />
     </div>
   );

@@ -52,3 +52,4 @@ hardhat-node*.log
 
 frontend/*.log
 *.log
+.tmp-screens/

@@ -4,59 +4,116 @@
 
 :root {
   color-scheme: dark;
-  --background: #050914;
-  --foreground: #f8fbff;
-  --panel: #0b1220;
-  --muted: #9aa7bd;
-  --line: #202a3d;
-  --accent: #7c5cff;
-  --accent-blue: #4d8dff;
-  --success: #56d68a;
+  --background: #080c10;
+  --foreground: #e8e4dc;
+  --panel: #080c10;
+  --muted: rgba(232, 228, 220, 0.52);
+  --line: rgba(255, 255, 255, 0.08);
+  --accent: #8fa89c;
+  --success: #8fa89c;
 }
 
 .dark {
   color-scheme: dark;
-  --background: #050914;
-  --foreground: #f8fbff;
-  --panel: #0b1220;
-  --muted: #9aa7bd;
-  --line: #202a3d;
+  --background: #080c10;
+  --foreground: #e8e4dc;
+  --panel: #080c10;
+  --muted: rgba(232, 228, 220, 0.52);
+  --line: rgba(255, 255, 255, 0.08);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 300;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
-body::before {
-  pointer-events: none;
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(circle at 18% 8%, rgba(82, 126, 255, 0.16), transparent 28%),
-    radial-gradient(circle at 82% 4%, rgba(124, 92, 255, 0.14), transparent 26%),
-    linear-gradient(180deg, #060b17 0%, #050914 42%, #070b12 100%);
+html {
+  overflow-x: hidden;
 }
 
-body::after {
-  pointer-events: none;
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  opacity: 0.32;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 72px 72px;
-  mask-image: linear-gradient(to bottom, black, transparent 72%);
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.font-mono,
+label,
+th {
+  font-family: var(--font-mono), ui-monospace, monospace;
 }
 
 button,
 input,
 select {
   font: inherit;
+}
+
+.mono-label {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+
+.hairline {
+  border: 0.5px solid var(--line);
+}
+
+.arc-button-outline {
+  border: 0.5px solid rgba(232, 228, 220, 0.45);
+  color: var(--foreground);
+  background: transparent;
+}
+
+.arc-button-outline:hover {
+  border-color: rgba(232, 228, 220, 0.76);
+  background: rgba(232, 228, 220, 0.04);
+}
+
+.arc-button-filled {
+  background: var(--foreground);
+  color: var(--background);
+  border: 0.5px solid var(--foreground);
+}
+
+.arc-card {
+  border: 0.5px solid var(--line);
+  background: transparent;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  color: transparent;
+  border-radius: 2px;
+  background: rgba(232, 228, 220, 0.08);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  animation: shimmer 1.6s infinite;
+  background: linear-gradient(90deg, transparent, rgba(232, 228, 220, 0.16), transparent);
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }

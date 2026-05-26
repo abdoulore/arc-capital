@@ -138,7 +138,7 @@ export default function AdminDealsPage() {
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Deal description"
-              className="min-h-24 w-full rounded-md border border-[var(--line)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-24 w-full rounded-none border border-white/[0.08] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
             />
             <div className="grid gap-3 md:grid-cols-2">
               <AdminInput value={riskLevel} onChange={setRiskLevel} placeholder="Risk level" />
@@ -151,17 +151,17 @@ export default function AdminDealsPage() {
             <AdminInput value={targetRaise} onChange={setTargetRaise} placeholder="Target raise USDC" />
             <AdminInput value={minRaise} onChange={setMinRaise} placeholder="Minimum raise USDC" />
             <AdminInput value={deadline} onChange={setDeadline} type="date" />
-            {formError ? <p className="text-sm text-amber-600 dark:text-amber-400">{formError}</p> : null}
+            {formError ? <p className="text-sm text-[var(--accent)]">{formError}</p> : null}
             <AdminButton onClick={createDeal}>Deploy deal vault</AdminButton>
           </div>
         </AdminPanel>
       </div>
       <AdminPanel title="Deals">
         <div className="mb-4 flex gap-2">
-          <button type="button" onClick={() => setTab("open")} className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === "open" ? "bg-blue-600 text-white" : "border border-[var(--line)]"}`}>
+          <button type="button" onClick={() => setTab("open")} className={`mono-label rounded-md border px-4 py-2 text-[10px] transition ${tab === "open" ? "border-[var(--accent)] text-[var(--foreground)]" : "border-white/[0.08] text-[var(--muted)] hover:border-white/[0.18]"}`}>
             Open Deals
           </button>
-          <button type="button" onClick={() => setTab("closed")} className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === "closed" ? "bg-blue-600 text-white" : "border border-[var(--line)]"}`}>
+          <button type="button" onClick={() => setTab("closed")} className={`mono-label rounded-md border px-4 py-2 text-[10px] transition ${tab === "closed" ? "border-[var(--accent)] text-[var(--foreground)]" : "border-white/[0.08] text-[var(--muted)] hover:border-white/[0.18]"}`}>
             Closed Deals
           </button>
         </div>
@@ -171,7 +171,7 @@ export default function AdminDealsPage() {
             <div key={deal.id} className="grid gap-3 py-3 text-sm md:grid-cols-[1fr_auto_auto_auto] md:items-center">
               <Link href={`/admin/deals/${deal.id}`} className="min-w-0">
                 <span className="font-medium">{deal.title}</span>
-                <span className="ml-2 rounded-full bg-slate-100 px-2 py-1 text-xs text-[var(--muted)] dark:bg-slate-900">{deal.status === "closed" ? "Closed" : "Open"}</span>
+                <span className="mono-label ml-2 rounded-full border border-white/[0.12] px-2 py-1 text-[9px] text-[var(--muted)]">{deal.status === "closed" ? "Closed" : "Open"}</span>
                 <p className="mt-1 truncate text-xs text-[var(--muted)]">{deal.contractAddress ? formatAddress(deal.contractAddress) : "Contract pending"}</p>
               </Link>
               <span className="text-[var(--muted)]">{formatCurrency(Number(deal.totalRaised ?? 0), 0)} raised</span>
@@ -183,7 +183,7 @@ export default function AdminDealsPage() {
               <button
                 type="button"
                 onClick={() => setDeleteCandidate(deal)}
-                className="rounded-md border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+                className="rounded-md border border-white/[0.18] px-3 py-2 text-sm text-[var(--foreground)] transition hover:border-white/[0.32]"
               >
                 Delete from app
               </button>
@@ -192,30 +192,30 @@ export default function AdminDealsPage() {
         </div>
       </AdminPanel>
       {closeCandidate ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-xl">
-            <h2 className="text-lg font-semibold">Close deal funding?</h2>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md border border-white/[0.08] bg-[var(--background)] p-5">
+            <h2 className="text-2xl">Close deal funding?</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">This prevents new investments into {closeCandidate.title}. Existing ownership and history stay intact.</p>
             <div className="mt-5 flex justify-end gap-3">
-              <button type="button" onClick={() => setCloseCandidate(null)} className="rounded-md border border-[var(--line)] px-4 py-2 text-sm font-semibold">Cancel</button>
+              <button type="button" onClick={() => setCloseCandidate(null)} className="arc-button-outline rounded-md px-4 py-2 text-sm">Cancel</button>
               <AdminButton onClick={() => closeDeal(closeCandidate)}>Confirm close</AdminButton>
             </div>
           </div>
         </div>
       ) : null}
       {deleteCandidate ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-xl">
-            <h2 className="text-lg font-semibold">Delete deal from app?</h2>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md border border-white/[0.08] bg-[var(--background)] p-5">
+            <h2 className="text-2xl">Delete deal from app?</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
               This archives {deleteCandidate.title} in the backend metadata so it no longer appears in open or closed deal lists. The onchain contract, ownership records, and transaction history remain unchanged.
             </p>
             <div className="mt-5 flex justify-end gap-3">
-              <button type="button" onClick={() => setDeleteCandidate(null)} className="rounded-md border border-[var(--line)] px-4 py-2 text-sm font-semibold">Cancel</button>
+              <button type="button" onClick={() => setDeleteCandidate(null)} className="arc-button-outline rounded-md px-4 py-2 text-sm">Cancel</button>
               <button
                 type="button"
                 onClick={() => deleteDeal(deleteCandidate)}
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                className="arc-button-filled rounded-md px-4 py-2 text-sm"
               >
                 Confirm delete
               </button>
