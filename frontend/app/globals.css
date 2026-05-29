@@ -4,6 +4,9 @@
 
 :root {
   color-scheme: dark;
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-body: "Geist", "Inter", system-ui, sans-serif;
+  --font-mono: "DM Mono", "SFMono-Regular", ui-monospace, monospace;
   --background: #080c10;
   --foreground: #e8e4dc;
   --panel: #080c10;
@@ -25,7 +28,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-body), system-ui, sans-serif;
+  font-family: var(--font-body);
   font-weight: 300;
   min-height: 100vh;
   overflow-x: hidden;
@@ -46,7 +49,7 @@ h1,
 h2,
 h3,
 .font-display {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display);
   font-weight: 400;
   letter-spacing: 0;
 }
@@ -54,7 +57,7 @@ h3,
 .font-mono,
 label,
 th {
-  font-family: var(--font-mono), ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 
 button,
@@ -64,7 +67,7 @@ select {
 }
 
 .mono-label {
-  font-family: var(--font-mono), ui-monospace, monospace;
+  font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.22em;
 }

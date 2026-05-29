@@ -62,6 +62,7 @@ export default function PortfolioPage() {
   const [now, setNow] = useState(0);
   const [portfolio, setPortfolio] = useState<V2Portfolio>(EMPTY_PORTFOLIO);
   const [earlyExitPosition, setEarlyExitPosition] = useState<V2Portfolio["fixedIncomePositions"][number] | null>(null);
+  const [optimisticallyExitedPositions, setOptimisticallyExitedPositions] = useState<Set<string>>(() => new Set());
   const longTerm = useLongTermVault();
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function PortfolioPage() {
 
   useEffect(() => {
     if (!address) return;
+    const resetTimer = window.setTimeout(() => setOptimisticallyExitedPositions(new Set()), 0);
     let cancelled = false;
 
     async function loadPortfolio() {
@@ -102,15 +104,24 @@ export default function PortfolioPage() {
     window.addEventListener("arc:data-refresh", loadPortfolio);
     return () => {
       cancelled = true;
+      window.clearTimeout(resetTimer);
       window.clearInterval(interval);
       window.removeEventListener("arc:data-refresh", loadPortfolio);
     };
   }, [address]);
 
+  const activeFixedIncomePositions = useMemo(
+    () =>
+      portfolio.fixedIncomePositions.filter(
+        (position) => position.status === "active" && !optimisticallyExitedPositions.has(positionKey(position)),
+      ),
+    [optimisticallyExitedPositions, portfolio.fixedIncomePositions],
+  );
+
   const totals = useMemo(() => {
     const monthly = decimalUsdcToRaw(portfolio.monthlyVault?.currentValueUsdc);
-    const fixed = portfolio.fixedIncomePositions.reduce((total, position) => total + decimalUsdcToRaw(position.principalUsdc), BigInt(0));
-    const fixedYield = portfolio.fixedIncomePositions.reduce((total, position) => total + decimalUsdcToRaw(position.claimableYieldUsdc), BigInt(0));
+    const fixed = activeFixedIncomePositions.reduce((total, position) => total + decimalUsdcToRaw(position.principalUsdc), BigInt(0));
+    const fixedYield = activeFixedIncomePositions.reduce((total, position) => total + decimalUsdcToRaw(position.claimableYieldUsdc), BigInt(0));
     const deals = portfolio.dealHoldings.reduce((total, holding) => total + decimalUsdcToRaw(holding.currentValueUsdc), BigInt(0));
     const dealYield = portfolio.dealHoldings.reduce((total, holding) => total + decimalUsdcToRaw(holding.claimableYieldUsdc), BigInt(0));
     return {
@@ -122,7 +133,7 @@ export default function PortfolioPage() {
       total: monthly + fixed + fixedYield + deals + dealYield,
       yield: fixedYield + dealYield,
     };
-  }, [portfolio]);
+  }, [activeFixedIncomePositions, portfolio]);
 
   if (!mounted || status === "connecting" || status === "reconnecting" || !isConnected) return null;
 
@@ -157,7 +168,7 @@ export default function PortfolioPage() {
           value={formatTokenAmount(totals.fixed, 6, "USDC", 2)}
           detail="Principal locked by maturity bucket. Yield claims are separate from principal redemption."
           rows={[
-            ["Active positions", String(portfolio.fixedIncomePositions.filter((position) => position.status === "active").length)],
+            ["Active positions", String(activeFixedIncomePositions.length)],
             ["Claimable yield", formatTokenAmount(totals.fixedYield, 6, "USDC", 2)],
           ]}
         />
@@ -194,8 +205,8 @@ export default function PortfolioPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.08]">
-              {portfolio.fixedIncomePositions.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No fixed-income positions.</td></tr> : null}
-              {portfolio.fixedIncomePositions.map((position) => (
+              {activeFixedIncomePositions.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No fixed-income positions.</td></tr> : null}
+              {activeFixedIncomePositions.map((position) => (
                 <FixedPositionRow key={position.id} position={position} longTerm={longTerm} now={now} onEarlyExit={setEarlyExitPosition} />
               ))}
             </tbody>
@@ -281,12 +292,24 @@ export default function PortfolioPage() {
             const positionId = earlyExitPosition.onchainPositionId;
             if (!positionId) return;
             const ok = await longTerm.earlyExit(BigInt(positionId));
-            if (ok) setEarlyExitPosition(null);
+            if (ok) {
+              const exitedKey = positionKey(earlyExitPosition);
+              setOptimisticallyExitedPositions((current) => new Set(current).add(exitedKey));
+              setPortfolio((current) => ({
+                ...current,
+                fixedIncomePositions: current.fixedIncomePositions.filter((position) => positionKey(position) !== exitedKey),
+              }));
+              setEarlyExitPosition(null);
+            }
           }}
         />
       ) : null}
     </div>
   );
+}
+
+function positionKey(position: V2Portfolio["fixedIncomePositions"][number]) {
+  return position.onchainPositionId ?? position.id;
 }
 
 function FixedPositionRow({

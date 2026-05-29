@@ -345,7 +345,7 @@ export async function getV2Portfolio(wallet?: string | null) {
       pool,
       `select id, onchain_position_id, principal_usdc, apy_bps, duration_seconds, maturity_at, claimable_yield_usdc, redeemed_at
        from v2_fixed_income_positions
-       where wallet = $1
+       where wallet = $1 and redeemed_at is null
        order by maturity_at asc`,
       [normalized],
     ),
