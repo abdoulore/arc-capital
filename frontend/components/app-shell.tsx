@@ -1,6 +1,7 @@
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -49,9 +50,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-5 sm:gap-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex min-w-max items-center gap-2 pr-3 text-lg font-normal tracking-normal sm:gap-3 sm:pr-5 sm:text-xl md:border-r md:border-white/[0.08]">
             <span className="relative grid h-8 w-8 overflow-hidden rounded-sm border border-white/[0.12] bg-transparent">
-              <img
+              <Image
                 src="/arc-capital-logo.png"
                 alt=""
+                width={32}
+                height={32}
                 className="h-full w-full scale-[2.6] object-cover"
                 aria-hidden="true"
               />

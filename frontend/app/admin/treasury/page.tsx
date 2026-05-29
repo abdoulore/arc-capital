@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Address } from "viem";
 import { useAccount, useReadContract } from "wagmi";
 import {
@@ -77,7 +77,7 @@ export default function AdminTreasuryPage() {
     query: { refetchInterval: 10000 },
   });
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     try {
       const [dealsResponse, treasuryResponse] = await Promise.all([
         fetch("/api/v2/deals", { cache: "no-store" }),
@@ -94,17 +94,18 @@ export default function AdminTreasuryPage() {
       setTreasury(EMPTY_TREASURY);
       setError("Treasury data unavailable.");
     }
-  }
+  }, []);
 
   useEffect(() => {
-    refresh();
+    const timer = window.setTimeout(refresh, 0);
     const interval = window.setInterval(refresh, 12000);
     window.addEventListener("arc:data-refresh", refresh);
     return () => {
+      window.clearTimeout(timer);
       window.clearInterval(interval);
       window.removeEventListener("arc:data-refresh", refresh);
     };
-  }, []);
+  }, [refresh]);
 
   return (
     <div>

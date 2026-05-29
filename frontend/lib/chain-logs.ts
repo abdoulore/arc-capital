@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 const DEFAULT_LOG_CHUNK_SIZE = BigInt(9_000);
 const DEFAULT_LOG_DELAY_MS = 650;
 const DEFAULT_LOG_LOOKBACK_BLOCKS = BigInt(9_000);

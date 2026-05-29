@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AdminHeader, AdminMetric, AdminPanel } from "@/components/admin/admin-ui";
 import { formatAddress, formatDate, formatNumber, formatTokenAmount } from "@/lib/utils";
 
@@ -19,7 +19,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
-  function refreshUsers() {
+  const refreshUsers = useCallback(() => {
     setLoading(true);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 8000);
@@ -38,13 +38,16 @@ export default function AdminUsersPage() {
         window.clearTimeout(timeout);
         setLoading(false);
       });
-  }
+  }, []);
 
   useEffect(() => {
-    refreshUsers();
+    const timer = window.setTimeout(refreshUsers, 0);
     const interval = window.setInterval(refreshUsers, 12000);
-    return () => window.clearInterval(interval);
-  }, []);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+    };
+  }, [refreshUsers]);
 
   return (
     <div>

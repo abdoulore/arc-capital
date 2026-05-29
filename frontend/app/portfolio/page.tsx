@@ -59,12 +59,23 @@ export default function PortfolioPage() {
   const router = useRouter();
   const { address, isConnected, status } = useAccount();
   const [mounted, setMounted] = useState(false);
+  const [now, setNow] = useState(0);
   const [portfolio, setPortfolio] = useState<V2Portfolio>(EMPTY_PORTFOLIO);
   const [earlyExitPosition, setEarlyExitPosition] = useState<V2Portfolio["fixedIncomePositions"][number] | null>(null);
   const longTerm = useLongTermVault();
 
   useEffect(() => {
-    setMounted(true);
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setNow(Date.now()), 0);
+    const interval = window.setInterval(() => setNow(Date.now()), 60000);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -185,7 +196,7 @@ export default function PortfolioPage() {
             <tbody className="divide-y divide-white/[0.08]">
               {portfolio.fixedIncomePositions.length === 0 ? <tr><td className="py-6 text-[var(--muted)]" colSpan={6}>No fixed-income positions.</td></tr> : null}
               {portfolio.fixedIncomePositions.map((position) => (
-                <FixedPositionRow key={position.id} position={position} longTerm={longTerm} onEarlyExit={setEarlyExitPosition} />
+                <FixedPositionRow key={position.id} position={position} longTerm={longTerm} now={now} onEarlyExit={setEarlyExitPosition} />
               ))}
             </tbody>
           </table>
@@ -281,16 +292,18 @@ export default function PortfolioPage() {
 function FixedPositionRow({
   position,
   longTerm,
+  now,
   onEarlyExit,
 }: {
   position: V2Portfolio["fixedIncomePositions"][number];
   longTerm: ReturnType<typeof useLongTermVault>;
+  now: number;
   onEarlyExit: (position: V2Portfolio["fixedIncomePositions"][number]) => void;
 }) {
   const positionId = position.onchainPositionId;
   const principal = decimalUsdcToRaw(position.principalUsdc);
   const claimableYield = decimalUsdcToRaw(position.claimableYieldUsdc);
-  const isMature = new Date(position.maturityAt).getTime() <= Date.now();
+  const isMature = now > 0 && new Date(position.maturityAt).getTime() <= now;
   const transactionPending = longTerm.transaction.status === "pending";
 
   return (

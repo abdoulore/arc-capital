@@ -11,7 +11,8 @@ export function AdminGuard({ children }: { children: ReactNode }) {
   const accountReady = mounted && status !== "connecting" && status !== "reconnecting";
 
   useEffect(() => {
-    setMounted(true);
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {

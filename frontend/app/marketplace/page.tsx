@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/modal";
 import { SectionHeader } from "@/components/section-header";
 import { StatusBadge } from "@/components/status-badge";
@@ -62,19 +62,22 @@ export default function MarketplacePage() {
   });
   const totalCost = useMemo(() => Number(amount || 0) * (selectedListing?.price ?? 0), [amount, selectedListing]);
 
-  async function refreshListings() {
+  const refreshListings = useCallback(async () => {
     const params = marketplace.address ? `?wallet=${marketplace.address}` : "";
     fetch(`/api/v2/marketplace${params}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data: { listings?: MarketplaceListing[] }) => setListings(data.listings ?? []))
       .catch(() => setListings([]));
-  }
+  }, [marketplace.address]);
 
   useEffect(() => {
-    refreshListings();
+    const timer = window.setTimeout(refreshListings, 0);
     const interval = window.setInterval(refreshListings, 10000);
-    return () => window.clearInterval(interval);
-  }, [marketplace.address]);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+    };
+  }, [refreshListings]);
 
   useEffect(() => {
     let cancelled = false;

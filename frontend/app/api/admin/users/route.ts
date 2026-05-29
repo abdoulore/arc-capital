@@ -3,7 +3,6 @@ import { createPublicClient, http, isAddress, parseAbiItem } from "viem";
 import {
   DEAL_FACTORY_ABI,
   DEAL_FACTORY_ADDRESS,
-  DEAL_VAULT_ABI,
   LONG_TERM_VAULT_ADDRESS,
   MARKETPLACE_ADDRESS,
   VAULT_ADDRESS,

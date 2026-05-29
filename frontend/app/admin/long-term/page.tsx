@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { isAddress, type Address } from "viem";
 import { AdminButton, AdminHeader, AdminInput, AdminMetric, AdminPanel, formatUsdc } from "@/components/admin/admin-ui";
 import { useAdminContracts } from "@/hooks/useAdminContracts";
@@ -34,7 +34,7 @@ export default function AdminLongTermPage() {
     setSelectedDuration(seconds);
   }
 
-  function refreshAnalytics() {
+  const refreshAnalytics = useCallback(() => {
     setLoading(true);
     fetch("/api/v2/admin/long-term", { cache: "no-store" })
       .then((res) => res.json())
@@ -47,13 +47,16 @@ export default function AdminLongTermPage() {
         setLoadError(true);
       })
       .finally(() => setLoading(false));
-  }
+  }, []);
 
   useEffect(() => {
-    refreshAnalytics();
+    const timer = window.setTimeout(refreshAnalytics, 0);
     const interval = window.setInterval(refreshAnalytics, 12000);
-    return () => window.clearInterval(interval);
-  }, []);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+    };
+  }, [refreshAnalytics]);
 
   return (
     <div>
