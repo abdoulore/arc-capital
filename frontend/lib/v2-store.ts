@@ -957,6 +957,24 @@ export async function getV2Activity(options: { wallet?: string; limit?: number; 
      limit ${limitParam}`,
     params,
   );
+  const fixedEventRows = options.wallet
+    ? await many<{
+        id: string;
+        event_name: string;
+        payload: Record<string, unknown>;
+        tx_hash: string;
+        block_timestamp: Date | null;
+      }>(
+        pool,
+        `select id, event_name, payload, tx_hash, block_timestamp
+         from v2_contract_events
+         where actor_wallet = $1
+           and event_name in ('FixedIncomeYieldClaimed', 'YieldClaimed', 'FixedIncomeRedeemed', 'Redeemed', 'FixedIncomeEarlyExited', 'EarlyExited')
+         order by block_timestamp desc nulls last
+         limit $2`,
+        params,
+      )
+    : [];
 
   return [
     ...rows.map((row) => ({
@@ -974,6 +992,14 @@ export async function getV2Activity(options: { wallet?: string; limit?: number; 
       valueUsdc: row.principal_usdc,
       txHash: row.created_tx_hash ?? undefined,
       timestamp: row.start_at.toISOString(),
+      source: "indexed" as const,
+    })),
+    ...fixedEventRows.map((row) => ({
+      id: row.id,
+      action: fixedIncomeActivityLabel(row.event_name),
+      valueUsdc: decimalString(row.payload?.amountUsdc),
+      txHash: row.tx_hash,
+      timestamp: (row.block_timestamp ?? new Date()).toISOString(),
       source: "indexed" as const,
     })),
   ]
@@ -1328,6 +1354,29 @@ async function projectV2Event(pool: Pool, event: V2IndexedEventInput) {
     );
   }
 
+  if ((eventName === "fixedincomeyieldclaimed" || eventName === "yieldclaimed") && wallet) {
+    const positionId = stringValue(payload.positionId) ?? "0";
+    await pool.query(
+      `update v2_fixed_income_positions
+       set claimable_yield_usdc = greatest(claimable_yield_usdc - $3::numeric, 0),
+           updated_at = $4
+       where wallet = $1 and onchain_position_id = $2`,
+      [wallet, positionId, amountUsdc, timestamp],
+    );
+  }
+
+  if ((eventName === "fixedincomeredeemed" || eventName === "redeemed" || eventName === "fixedincomeearlyexited" || eventName === "earlyexited") && wallet) {
+    const positionId = stringValue(payload.positionId) ?? "0";
+    await pool.query(
+      `update v2_fixed_income_positions
+       set redeemed_at = coalesce(redeemed_at, $3),
+           claimable_yield_usdc = 0,
+           updated_at = $3
+       where wallet = $1 and onchain_position_id = $2`,
+      [wallet, positionId, timestamp],
+    );
+  }
+
   if (eventName === "monthlyyieldinjected") {
     const operator = stringValue(payload.operator ?? event.actorWallet)?.toLowerCase();
     await pool.query(
@@ -1513,6 +1562,14 @@ function durationLabel(durationSeconds: number) {
   if (days >= 725) return "2 year pool";
   if (days >= 360) return "1 year pool";
   return "Fixed-term pool";
+}
+
+function fixedIncomeActivityLabel(eventName: string) {
+  const normalized = eventName.toLowerCase();
+  if (normalized.includes("earlyexited")) return "Fixed-income early exit";
+  if (normalized.includes("redeemed")) return "Fixed-income redemption";
+  if (normalized.includes("yieldclaimed")) return "Fixed-income yield claim";
+  return "Fixed-income activity";
 }
 
 function normalizeWallet(wallet: string) {

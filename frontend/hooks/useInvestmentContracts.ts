@@ -6,8 +6,8 @@ import { useAccount, usePublicClient, useReadContract, useReadContracts, useWrit
 import {
   DEAL_VAULT_ABI,
   DEAL_VAULT_V2_ABI,
-  LONG_TERM_VAULT_ABI,
-  LONG_TERM_VAULT_ADDRESS,
+  LONG_TERM_VAULT_V2_ABI,
+  LONG_TERM_VAULT_V2_ADDRESS,
   MARKETPLACE_V2_ABI,
   MARKETPLACE_V2_ADDRESS,
   SAMPLE_DEAL_ADDRESS,
@@ -270,29 +270,29 @@ export function useLongTermVault() {
   const [transaction, setTransaction] = useState<TransactionState>({ label: "", status: "idle" });
 
   const oneYear = useReadContract({
-    address: LONG_TERM_VAULT_ADDRESS,
-    abi: LONG_TERM_VAULT_ABI,
-    functionName: "tranches",
+    address: LONG_TERM_VAULT_V2_ADDRESS,
+    abi: LONG_TERM_VAULT_V2_ABI,
+    functionName: "tranche",
     args: [BigInt(365 * 24 * 60 * 60)],
   });
 
   const twoYears = useReadContract({
-    address: LONG_TERM_VAULT_ADDRESS,
-    abi: LONG_TERM_VAULT_ABI,
-    functionName: "tranches",
+    address: LONG_TERM_VAULT_V2_ADDRESS,
+    abi: LONG_TERM_VAULT_V2_ABI,
+    functionName: "tranche",
     args: [BigInt(730 * 24 * 60 * 60)],
   });
 
   const threeYears = useReadContract({
-    address: LONG_TERM_VAULT_ADDRESS,
-    abi: LONG_TERM_VAULT_ABI,
-    functionName: "tranches",
+    address: LONG_TERM_VAULT_V2_ADDRESS,
+    abi: LONG_TERM_VAULT_V2_ABI,
+    functionName: "tranche",
     args: [BigInt(1095 * 24 * 60 * 60)],
   });
 
   const userPositions = useReadContract({
-    address: LONG_TERM_VAULT_ADDRESS,
-    abi: LONG_TERM_VAULT_ABI,
+    address: LONG_TERM_VAULT_V2_ADDRESS,
+    abi: LONG_TERM_VAULT_V2_ABI,
     functionName: "getUserPositions",
     args: address ? [address] : undefined,
     query: { refetchInterval: 10000 },
@@ -301,14 +301,14 @@ export function useLongTermVault() {
   const positionReads = useReadContracts({
     contracts: positionIds.flatMap((positionId) => [
       {
-        address: LONG_TERM_VAULT_ADDRESS,
-        abi: LONG_TERM_VAULT_ABI,
+        address: LONG_TERM_VAULT_V2_ADDRESS,
+        abi: LONG_TERM_VAULT_V2_ABI,
         functionName: "positions",
         args: [positionId],
       },
       {
-        address: LONG_TERM_VAULT_ADDRESS,
-        abi: LONG_TERM_VAULT_ABI,
+        address: LONG_TERM_VAULT_V2_ADDRESS,
+        abi: LONG_TERM_VAULT_V2_ABI,
         functionName: "claimableYield",
         args: [positionId],
       },
@@ -356,12 +356,12 @@ export function useLongTermVault() {
             address: USDC_ADDRESS,
             abi: USDC_ABI,
             functionName: "approve",
-            args: [LONG_TERM_VAULT_ADDRESS, parsed],
+            args: [LONG_TERM_VAULT_V2_ADDRESS, parsed],
           }),
         () =>
           writeContractAsync({
-            address: LONG_TERM_VAULT_ADDRESS,
-            abi: LONG_TERM_VAULT_ABI,
+            address: LONG_TERM_VAULT_V2_ADDRESS,
+            abi: LONG_TERM_VAULT_V2_ABI,
             functionName: "deposit",
             args: [parsed, duration],
           }),
@@ -386,8 +386,8 @@ export function useLongTermVault() {
       steps: [
         () =>
           writeContractAsync({
-            address: LONG_TERM_VAULT_ADDRESS,
-            abi: LONG_TERM_VAULT_ABI,
+            address: LONG_TERM_VAULT_V2_ADDRESS,
+            abi: LONG_TERM_VAULT_V2_ABI,
             functionName: "claimYield",
             args: [positionId],
           }),
@@ -416,8 +416,8 @@ export function useLongTermVault() {
       steps: [
         () =>
           writeContractAsync({
-            address: LONG_TERM_VAULT_ADDRESS,
-            abi: LONG_TERM_VAULT_ABI,
+            address: LONG_TERM_VAULT_V2_ADDRESS,
+            abi: LONG_TERM_VAULT_V2_ABI,
             functionName: "redeemAtMaturity",
             args: [positionId],
           }),
@@ -450,8 +450,8 @@ export function useLongTermVault() {
       steps: [
         () =>
           writeContractAsync({
-            address: LONG_TERM_VAULT_ADDRESS,
-            abi: LONG_TERM_VAULT_ABI,
+            address: LONG_TERM_VAULT_V2_ADDRESS,
+            abi: LONG_TERM_VAULT_V2_ABI,
             functionName: "earlyExit",
             args: [positionId],
           }),
@@ -471,7 +471,11 @@ export function useLongTermVault() {
   }
 
   return {
-    tranches: [oneYear.data, twoYears.data, threeYears.data],
+    tranches: [
+      normalizeTranche(BigInt(365 * 24 * 60 * 60), oneYear.data),
+      normalizeTranche(BigInt(730 * 24 * 60 * 60), twoYears.data),
+      normalizeTranche(BigInt(1095 * 24 * 60 * 60), threeYears.data),
+    ],
     userPositions: userPositions.data ?? [],
     positions,
     transaction,
@@ -480,6 +484,12 @@ export function useLongTermVault() {
     redeemAtMaturity,
     earlyExit,
   };
+}
+
+function normalizeTranche(duration: bigint, data: readonly [bigint, boolean] | undefined) {
+  if (!data) return undefined;
+  const [apyBps, enabled] = data;
+  return [duration, apyBps, enabled] as const;
 }
 
 export function useDealVault(dealAddress: Address = SAMPLE_DEAL_ADDRESS) {
