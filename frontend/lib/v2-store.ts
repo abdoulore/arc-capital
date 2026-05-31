@@ -1,11 +1,34 @@
 import { Pool, type QueryResultRow } from "pg";
+import { createPublicClient, http, parseAbi } from "viem";
 import { ARC_TESTNET_CHAIN_ID } from "./arc";
+import { arcCapitalContracts, isConfiguredAddress } from "./contracts";
+import { arcTestnet, ARC_TESTNET_RPC_URL } from "./network";
 
 const POSTGRES_URL =
   process.env.POSTGRES_URL ??
   process.env.DATABASE_URL ??
   process.env.POSTGRES_PRISMA_URL ??
   process.env.POSTGRES_URL_NON_POOLING;
+
+const LONG_TERM_POSITION_RECONCILE_ABI = parseAbi([
+  "function positions(uint256 positionId) view returns (address owner,uint256 principal,uint256 duration,uint256 apyBps,uint256 start,uint256 maturity,uint256 lastClaim,bool redeemed)",
+]);
+
+const arcReadClient = createPublicClient({
+  chain: arcTestnet,
+  transport: http(ARC_TESTNET_RPC_URL),
+});
+
+type FixedIncomePositionRow = {
+  id: string;
+  onchain_position_id: string | null;
+  principal_usdc: string;
+  apy_bps: number;
+  duration_seconds: number;
+  maturity_at: Date;
+  claimable_yield_usdc: string;
+  redeemed_at: Date | null;
+};
 
 export type V2DataStatus = "live" | "pending";
 
@@ -324,7 +347,7 @@ export async function getV2Portfolio(wallet?: string | null) {
   const pool = await getV2Pool();
   if (!pool || !wallet) return emptyPortfolio(pool ? "live" : "pending");
   const normalized = normalizeWallet(wallet);
-  const [monthly, fixedPositions, dealHoldings, activity] = await Promise.all([
+  const [monthly, indexedFixedPositions, dealHoldings, activity] = await Promise.all([
     one<{ shares: string; current_value_usdc: string; claimable_yield_usdc: string; updated_at: Date }>(
       pool,
       `select shares, current_value_usdc, claimable_yield_usdc, updated_at
@@ -332,16 +355,7 @@ export async function getV2Portfolio(wallet?: string | null) {
        where wallet = $1`,
       [normalized],
     ),
-    many<{
-      id: string;
-      onchain_position_id: string | null;
-      principal_usdc: string;
-      apy_bps: number;
-      duration_seconds: number;
-      maturity_at: Date;
-      claimable_yield_usdc: string;
-      redeemed_at: Date | null;
-    }>(
+    many<FixedIncomePositionRow>(
       pool,
       `select id, onchain_position_id, principal_usdc, apy_bps, duration_seconds, maturity_at, claimable_yield_usdc, redeemed_at
        from v2_fixed_income_positions
@@ -369,6 +383,7 @@ export async function getV2Portfolio(wallet?: string | null) {
     ),
     getV2Activity({ wallet: normalized, limit: 25 }),
   ]);
+  const fixedPositions = await reconcileActiveFixedIncomePositions(pool, normalized, indexedFixedPositions);
 
   return {
     status: "live" as V2DataStatus,
@@ -1526,6 +1541,42 @@ async function one<T extends QueryResultRow>(pool: Pool, text: string, values: u
 async function many<T extends QueryResultRow>(pool: Pool, text: string, values: unknown[] = []) {
   const result = await pool.query<T>(text, values);
   return result.rows;
+}
+
+async function reconcileActiveFixedIncomePositions(pool: Pool, wallet: string, positions: FixedIncomePositionRow[]) {
+  const vaultAddress = arcCapitalContracts.longTermVaultV2;
+  if (!isConfiguredAddress(vaultAddress)) return positions;
+
+  const reconciled = await Promise.all(
+    positions.map(async (position) => {
+      if (!position.onchain_position_id) return position;
+      try {
+        const onchain = await arcReadClient.readContract({
+          address: vaultAddress,
+          abi: LONG_TERM_POSITION_RECONCILE_ABI,
+          functionName: "positions",
+          args: [BigInt(position.onchain_position_id)],
+        });
+        const [owner, principal, , , , , , redeemed] = onchain;
+        const closed = redeemed || principal === BigInt(0) || owner.toLowerCase() !== wallet;
+        if (!closed) return position;
+
+        await pool.query(
+          `update v2_fixed_income_positions
+           set redeemed_at = coalesce(redeemed_at, now()),
+               claimable_yield_usdc = 0,
+               updated_at = now()
+           where id = $1`,
+          [position.id],
+        );
+        return null;
+      } catch {
+        return position;
+      }
+    }),
+  );
+
+  return reconciled.filter((position): position is FixedIncomePositionRow => Boolean(position));
 }
 
 function emptyDashboard(status: V2DataStatus) {

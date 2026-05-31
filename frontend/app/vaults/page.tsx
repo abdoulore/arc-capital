@@ -12,9 +12,9 @@ const USDC_DECIMALS = 6;
 const SHARE_DECIMALS = 6;
 const WAD_DECIMALS = 18;
 const LONG_TERM_OPTIONS = [
-  { duration: "1 year", description: "Monthly payout, principal at maturity" },
-  { duration: "2 years", description: "Higher fixed payout with medium lock" },
-  { duration: "3 years", description: "Highest fixed payout, least liquid" },
+  { duration: "1 year", description: "Monthly payout, principal at maturity", defaultApyBps: 800 },
+  { duration: "2 years", description: "Higher fixed payout with medium lock", defaultApyBps: 1200 },
+  { duration: "3 years", description: "Highest fixed payout, least liquid", defaultApyBps: 1800 },
 ];
 type MonthlyApySummary = {
   status: "ready" | "unavailable";
@@ -87,17 +87,19 @@ export default function VaultsPage() {
 
   const liveOptions = LONG_TERM_OPTIONS.map((option, index) => {
     const tranche = longTerm.tranches[index];
+    const apyBps = tranche?.[1] ?? BigInt(option.defaultApyBps);
     return {
       ...option,
-      apy: tranche ? Number(tranche[1]) / 100 : undefined,
+      apy: Number(apyBps) / 100,
       enabled: tranche ? tranche[2] : true,
+      isLive: Boolean(tranche),
     };
   });
   const selectedFixedOption = liveOptions[selectedDurationIndex];
   const selectedDurationDays = [365, 730, 1095][selectedDurationIndex];
   const fixedAmountNumber = Number(fixedAmount || 0);
-  const estimatedMonthlyYield = selectedFixedOption.apy === undefined ? undefined : (fixedAmountNumber * (selectedFixedOption.apy / 100)) / 12;
-  const projectedYearlyYield = selectedFixedOption.apy === undefined ? undefined : fixedAmountNumber * (selectedFixedOption.apy / 100);
+  const estimatedMonthlyYield = (fixedAmountNumber * (selectedFixedOption.apy / 100)) / 12;
+  const projectedYearlyYield = fixedAmountNumber * (selectedFixedOption.apy / 100);
   const maturityDate = todayMs ? new Date(todayMs + selectedDurationDays * 24 * 60 * 60 * 1000) : null;
   const maturityDateText = maturityDate
     ? maturityDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
@@ -272,12 +274,15 @@ export default function VaultsPage() {
 
             <div className="border border-white/[0.08] bg-transparent p-6 text-[var(--foreground)]">
               <p className="text-sm text-[var(--muted)]">Fixed APY</p>
-              <div className="mt-2 text-5xl text-[var(--accent)]">{selectedFixedOption.apy === undefined ? <PendingSkeleton className="h-12 w-44" /> : formatPercent(selectedFixedOption.apy)}</div>
+              <div className="mt-2 text-5xl text-[var(--accent)]">{formatPercent(selectedFixedOption.apy)}</div>
               <p className="mt-2 text-sm text-[var(--muted)]">{selectedFixedOption.description}</p>
+              {!selectedFixedOption.isLive ? (
+                <p className="mt-1 text-xs text-[var(--muted)]">Using configured V2 terms while live tranche data loads.</p>
+              ) : null}
 
               <div className="mt-5 space-y-3 text-sm">
-                <SummaryRow label="Monthly payout estimate" value={estimatedMonthlyYield === undefined ? "Awaiting Live Data" : formatCurrency(estimatedMonthlyYield)} />
-                <SummaryRow label="Projected yearly earnings" value={projectedYearlyYield === undefined ? "Awaiting Live Data" : formatCurrency(projectedYearlyYield)} />
+                <SummaryRow label="Monthly payout estimate" value={formatCurrency(estimatedMonthlyYield)} />
+                <SummaryRow label="Projected yearly earnings" value={formatCurrency(projectedYearlyYield)} />
                 <SummaryRow label="Maturity date" value={maturityDateText} />
                 <SummaryRow label="Settlement" value="Approve USDC, then confirm deposit" />
               </div>
