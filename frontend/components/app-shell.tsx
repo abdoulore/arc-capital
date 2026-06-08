@@ -46,8 +46,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-[var(--background)] text-[var(--foreground)]">
-      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-transparent backdrop-blur-sm">
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-5 sm:gap-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#080c10]/92 backdrop-blur-sm">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-4 sm:gap-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex min-w-max items-center gap-2 pr-3 text-lg font-normal tracking-normal sm:gap-3 sm:pr-5 sm:text-xl md:border-r md:border-white/[0.08]">
             <span className="relative grid h-8 w-8 overflow-hidden rounded-sm border border-white/[0.12] bg-transparent">
               <Image
@@ -69,6 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   key={item.href}
                   href={item.href}
                   prefetch={false}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
                     "mono-label relative whitespace-nowrap py-2 text-[11px] text-[var(--muted)] transition hover:text-[var(--foreground)]",
                     active && "text-[var(--foreground)] after:absolute after:inset-x-0 after:-bottom-5 after:h-px after:bg-[var(--accent)]"
@@ -82,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="ml-auto flex min-w-0 items-center gap-2">
             <div
               className={cn(
-                "mono-label hidden items-center rounded-md border border-white/[0.12] px-3 py-2 text-[10px] md:flex",
+                "mono-label hidden items-center border border-white/[0.12] px-3 py-2 text-[10px] md:flex",
                 networkOk
                   ? "text-[var(--foreground)]"
                   : "text-[var(--muted)]",
@@ -101,7 +102,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <button
                       type="button"
                       onClick={openConnectModal}
-                      className="arc-button-outline mono-label flex-shrink-0 rounded-md px-2.5 py-2 text-[10px] transition sm:px-4 sm:text-[11px]"
+                      className="arc-button-outline mono-label flex-shrink-0 px-2.5 py-2 text-[10px] transition sm:px-4 sm:text-[11px]"
                     >
                       <span className="sm:hidden">Connect</span>
                       <span className="hidden sm:inline">Connect Wallet</span>
@@ -113,7 +114,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <button
                     type="button"
                     onClick={openAccountModal}
-                    className="arc-button-outline flex min-w-0 flex-shrink-0 items-center gap-2 rounded-md px-2.5 py-2 text-xs transition sm:px-3"
+                    className="arc-button-outline flex min-w-0 flex-shrink-0 items-center gap-2 px-2.5 py-2 text-xs transition sm:px-3"
                   >
                     <span>{account.displayBalance}</span>
                     <span className="h-1 w-1 rounded-full bg-[var(--muted)]" />

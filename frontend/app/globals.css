@@ -10,10 +10,14 @@
   --background: #080c10;
   --foreground: #e8e4dc;
   --panel: #080c10;
+  --surface: rgba(232, 228, 220, 0.018);
+  --surface-strong: rgba(232, 228, 220, 0.04);
   --muted: rgba(232, 228, 220, 0.52);
   --line: rgba(255, 255, 255, 0.08);
   --accent: #8fa89c;
   --success: #8fa89c;
+  --warning: #c9ad8c;
+  --danger: #d28f8f;
 }
 
 .dark {
@@ -21,6 +25,8 @@
   --background: #080c10;
   --foreground: #e8e4dc;
   --panel: #080c10;
+  --surface: rgba(232, 228, 220, 0.018);
+  --surface-strong: rgba(232, 228, 220, 0.04);
   --muted: rgba(232, 228, 220, 0.52);
   --line: rgba(255, 255, 255, 0.08);
 }
@@ -32,6 +38,7 @@ body {
   font-weight: 300;
   min-height: 100vh;
   overflow-x: hidden;
+  text-rendering: geometricPrecision;
 }
 
 html {
@@ -62,8 +69,13 @@ th {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
+}
+
+.font-body {
+  font-family: var(--font-body);
 }
 
 .mono-label {
@@ -80,6 +92,10 @@ select {
   border: 0.5px solid rgba(232, 228, 220, 0.45);
   color: var(--foreground);
   background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
 }
 
 .arc-button-outline:hover {
@@ -91,18 +107,89 @@ select {
   background: var(--foreground);
   color: var(--background);
   border: 0.5px solid var(--foreground);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
 }
 
 .arc-card {
   border: 0.5px solid var(--line);
+  background: var(--surface);
+}
+
+.arc-panel {
+  border: 0.5px solid var(--line);
+  background: var(--surface);
+}
+
+.arc-row {
+  border-bottom: 0.5px solid var(--line);
+}
+
+.arc-row:last-child {
+  border-bottom: 0;
+}
+
+.arc-field {
+  border: 0.5px solid var(--line);
   background: transparent;
+  color: var(--foreground);
+  outline: none;
+}
+
+.arc-field:focus {
+  border-color: rgba(143, 168, 156, 0.72);
+}
+
+.arc-field::placeholder {
+  color: rgba(232, 228, 220, 0.4);
+}
+
+.arc-link {
+  color: var(--muted);
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.arc-link:hover {
+  color: var(--foreground);
+}
+
+.arc-table {
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.arc-table thead {
+  border-bottom: 0.5px solid var(--line);
+  color: var(--muted);
+}
+
+.arc-table tbody {
+  border-color: var(--line);
+}
+
+select option {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+::selection {
+  background: rgba(143, 168, 156, 0.28);
+  color: var(--foreground);
+}
+
+*:focus-visible {
+  outline: 1px solid rgba(143, 168, 156, 0.72);
+  outline-offset: 3px;
 }
 
 .skeleton {
   position: relative;
   overflow: hidden;
   color: transparent;
-  border-radius: 2px;
+  border-radius: 0;
   background: rgba(232, 228, 220, 0.08);
 }
 

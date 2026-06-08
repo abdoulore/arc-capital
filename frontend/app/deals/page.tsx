@@ -50,24 +50,24 @@ export default function DealsPage() {
         description="Each deal has isolated accounting, its own risk profile, and revenue-based distributions. No guaranteed APY is implied."
       />
 
-      {dealVault.transaction.status !== "idle" ? (
+      {dealVault.transaction.status === "pending" || dealVault.transaction.status === "confirmed" ? (
         <div className="mb-6 border border-white/[0.08] bg-transparent p-4 text-sm text-[var(--muted)]">
           {dealVault.transaction.label}
         </div>
       ) : null}
 
       <div className="mb-5 flex gap-2">
-        <button type="button" onClick={() => setTab("open")} className={`mono-label rounded-md border px-4 py-2 text-[10px] transition ${tab === "open" ? "border-[var(--accent)] text-[var(--foreground)]" : "border-white/[0.08] text-[var(--muted)] hover:border-white/[0.18]"}`}>
+        <button type="button" onClick={() => setTab("open")} className={`mono-label border px-4 py-2 text-[10px] transition ${tab === "open" ? "border-[var(--accent)] text-[var(--foreground)]" : "border-white/[0.08] text-[var(--muted)] hover:border-white/[0.18]"}`}>
           Open Deals
         </button>
-        <button type="button" onClick={() => setTab("closed")} className={`mono-label rounded-md border px-4 py-2 text-[10px] transition ${tab === "closed" ? "border-[var(--accent)] text-[var(--foreground)]" : "border-white/[0.08] text-[var(--muted)] hover:border-white/[0.18]"}`}>
+        <button type="button" onClick={() => setTab("closed")} className={`mono-label border px-4 py-2 text-[10px] transition ${tab === "closed" ? "border-[var(--accent)] text-[var(--foreground)]" : "border-white/[0.08] text-[var(--muted)] hover:border-white/[0.18]"}`}>
           Closed Deals
         </button>
       </div>
 
       <section className="grid gap-5 lg:grid-cols-3">
         {visibleDeals.length === 0 ? (
-          <div className="border border-white/[0.08] bg-transparent p-8 lg:col-span-3">
+          <div className="arc-panel p-8 lg:col-span-3">
             <p className="text-2xl">{tab === "open" ? "No open deals available." : "No closed deals yet."}</p>
             <p className="mt-3 max-w-2xl text-sm font-light leading-6 text-[var(--muted)]">
               {tab === "open"
@@ -105,7 +105,7 @@ export default function DealsPage() {
                     Connect your wallet to review investment terms and submit a transaction.
                   </p>
                 </div>
-                <WalletGatedButton className="arc-button-outline mt-5 w-full rounded-md px-4 py-3 text-sm transition">
+                <WalletGatedButton className="arc-button-outline mt-5 w-full px-4 py-3 text-sm transition">
                   Confirm investment
                 </WalletGatedButton>
               </div>
@@ -118,7 +118,7 @@ export default function DealsPage() {
                     setFormError(null);
                   }}
                   placeholder="USDC amount"
-                  className="mt-4 w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 outline-none focus:border-[var(--accent)]"
+                  className="arc-field mt-4 w-full px-4 py-3"
                 />
                 <div className="mt-4 border border-white/[0.08] bg-transparent p-3 text-sm text-[var(--muted)]">
                   Private deal shares are illiquid unless another buyer fills your marketplace listing. Yield rights follow share ownership.
@@ -144,7 +144,7 @@ export default function DealsPage() {
                     }
                   }}
                   disabled={dealVault.transaction.status === "pending" || !activeDeal.contractAddress}
-                  className="arc-button-filled mt-5 w-full rounded-md px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
+                  className="arc-button-filled mt-5 w-full px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {dealVault.transaction.status === "pending" ? "Confirming..." : dealVault.transaction.status === "confirmed" ? "Confirmed" : "Confirm investment"}
                 </button>

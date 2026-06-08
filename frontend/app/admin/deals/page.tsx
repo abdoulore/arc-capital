@@ -197,7 +197,7 @@ export default function AdminDealsPage() {
             <h2 className="text-2xl">Close deal funding?</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">This prevents new investments into {closeCandidate.title}. Existing ownership and history stay intact.</p>
             <div className="mt-5 flex justify-end gap-3">
-              <button type="button" onClick={() => setCloseCandidate(null)} className="arc-button-outline rounded-md px-4 py-2 text-sm">Cancel</button>
+              <button type="button" onClick={() => setCloseCandidate(null)} className="arc-button-outline px-4 py-2 text-sm">Cancel</button>
               <AdminButton onClick={() => closeDeal(closeCandidate)}>Confirm close</AdminButton>
             </div>
           </div>
@@ -211,11 +211,11 @@ export default function AdminDealsPage() {
               This archives {deleteCandidate.title} in the backend metadata so it no longer appears in open or closed deal lists. The onchain contract, ownership records, and transaction history remain unchanged.
             </p>
             <div className="mt-5 flex justify-end gap-3">
-              <button type="button" onClick={() => setDeleteCandidate(null)} className="arc-button-outline rounded-md px-4 py-2 text-sm">Cancel</button>
+              <button type="button" onClick={() => setDeleteCandidate(null)} className="arc-button-outline px-4 py-2 text-sm">Cancel</button>
               <button
                 type="button"
                 onClick={() => deleteDeal(deleteCandidate)}
-                className="arc-button-filled rounded-md px-4 py-2 text-sm"
+                className="arc-button-filled px-4 py-2 text-sm"
               >
                 Confirm delete
               </button>

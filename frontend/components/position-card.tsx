@@ -15,11 +15,11 @@ type PositionCardProps = {
 
 export function PositionCard({ title, value, yieldEarned, status, detail, action }: PositionCardProps) {
   return (
-    <article className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 shadow-sm">
+    <article className="arc-panel p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-semibold">{title}</h3>
-          <p className="mt-1 text-sm text-[var(--muted)]">{detail}</p>
+          <h3 className="text-2xl leading-tight">{title}</h3>
+          <p className="mt-2 text-sm font-light leading-6 text-[var(--muted)]">{detail}</p>
         </div>
         <StatusBadge label={status} />
       </div>
@@ -30,11 +30,11 @@ export function PositionCard({ title, value, yieldEarned, status, detail, action
         </div>
         <div>
           <p className="text-[var(--muted)]">Yield earned</p>
-          <p className="mt-1 text-lg font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(yieldEarned)}</p>
+          <p className="mt-1 text-lg font-semibold text-[var(--accent)]">{formatCurrency(yieldEarned)}</p>
         </div>
       </div>
       {action ? (
-        <WalletGatedButton className="mt-5 rounded-md border border-[var(--line)] px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-900">
+        <WalletGatedButton className="arc-button-outline mt-5 px-4 py-2 text-sm font-medium">
           {action}
         </WalletGatedButton>
       ) : null}

@@ -39,7 +39,7 @@ export function AdminButton({ children, onClick, disabled }: { children: ReactNo
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="arc-button-outline rounded-md px-4 py-2.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
+      className="arc-button-outline px-4 py-2.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
     >
       {children}
     </button>

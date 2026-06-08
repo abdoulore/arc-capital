@@ -184,7 +184,7 @@ export default function PortfolioPage() {
         />
       </section>
 
-      <section className="mt-5 border border-white/[0.08] bg-transparent p-5">
+      <section className="arc-panel mt-5 p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-2xl">Fixed-income positions</h2>
@@ -193,7 +193,7 @@ export default function PortfolioPage() {
           <StatusBadge label="Fixed APY" />
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="arc-table min-w-[720px]">
             <thead className="border-b border-white/[0.08] text-[var(--muted)]">
               <tr>
                 <th className="mono-label py-3 text-[10px] font-normal">Lock</th>
@@ -214,7 +214,7 @@ export default function PortfolioPage() {
         </div>
       </section>
 
-      <section className="mt-5 border border-white/[0.08] bg-transparent p-5">
+      <section className="arc-panel mt-5 p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-2xl">Deal positions</h2>
@@ -223,7 +223,7 @@ export default function PortfolioPage() {
           <StatusBadge label="Deal Shares" />
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="arc-table min-w-[720px]">
             <thead className="border-b border-white/[0.08] text-[var(--muted)]">
               <tr>
                 <th className="mono-label py-3 text-[10px] font-normal">Deal</th>
@@ -241,12 +241,12 @@ export default function PortfolioPage() {
         </div>
       </section>
 
-      <section className="mt-5 border border-white/[0.08] bg-transparent p-5">
+      <section className="arc-panel mt-5 p-5">
         <h2 className="text-2xl">Transaction history</h2>
         {portfolio.activity.length === 0 ? <p className="py-6 text-sm text-[var(--muted)]">No Activity Yet</p> : null}
         {portfolio.activity.length > 0 ? (
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="arc-table min-w-[760px]">
               <thead className="border-b border-white/[0.08] text-[var(--muted)]">
                 <tr>
                   <th className="mono-label py-3 text-[10px] font-normal">Activity</th>
@@ -342,7 +342,7 @@ function FixedPositionRow({
             <WalletGatedButton
               onClick={() => longTerm.claimYield(BigInt(positionId))}
               disabled={transactionPending}
-              className="arc-button-outline rounded-md px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60"
+              className="arc-button-outline px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               {transactionPending ? "Working..." : "Claim"}
             </WalletGatedButton>
@@ -351,7 +351,7 @@ function FixedPositionRow({
             <WalletGatedButton
               onClick={() => longTerm.redeemAtMaturity(BigInt(positionId))}
               disabled={transactionPending}
-              className="arc-button-filled rounded-md px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60"
+              className="arc-button-filled px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               {transactionPending ? "Working..." : "Redeem"}
             </WalletGatedButton>
@@ -359,7 +359,7 @@ function FixedPositionRow({
             <WalletGatedButton
               onClick={() => onEarlyExit(position)}
               disabled={transactionPending || !positionId || principal === BigInt(0)}
-              className="rounded-md border border-white/[0.18] px-3 py-2 text-sm text-[var(--foreground)] transition hover:border-white/[0.32] disabled:cursor-not-allowed disabled:opacity-60"
+              className="arc-button-outline px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               {transactionPending ? "Working..." : "Early exit"}
             </WalletGatedButton>
@@ -385,7 +385,7 @@ function DealHoldingRow({ holding }: { holding: V2Portfolio["dealHoldings"][numb
           <WalletGatedButton
             onClick={() => dealVault.claimYield()}
             disabled={dealVault.transaction.status === "pending"}
-            className="arc-button-outline rounded-md px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60"
+            className="arc-button-outline px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60"
           >
             {dealVault.transaction.status === "pending" ? "Claiming..." : "Claim"}
           </WalletGatedButton>
@@ -414,7 +414,7 @@ function EarlyExitModal({
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md border border-white/[0.08] bg-[var(--background)] p-6">
+      <div className="arc-panel w-full max-w-md p-6">
         <p className="mono-label text-[10px] text-[var(--accent)]">Fixed-income early exit</p>
         <h2 className="mt-3 text-3xl">Confirm early exit</h2>
         <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
@@ -427,10 +427,10 @@ function EarlyExitModal({
           <PreviewRow label="Maturity" value={formatDate(position.maturityAt)} />
         </div>
         <div className="mt-6 flex justify-end gap-3">
-          <button type="button" onClick={onCancel} disabled={busy} className="arc-button-outline rounded-md px-4 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60">
+          <button type="button" onClick={onCancel} disabled={busy} className="arc-button-outline px-4 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60">
             Cancel
           </button>
-          <button type="button" onClick={() => void onConfirm()} disabled={busy} className="arc-button-filled rounded-md px-4 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60">
+          <button type="button" onClick={() => void onConfirm()} disabled={busy} className="arc-button-filled px-4 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60">
             {busy ? "Confirming..." : "Confirm early exit"}
           </button>
         </div>
@@ -441,7 +441,7 @@ function EarlyExitModal({
 
 function PortfolioMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="border border-white/[0.08] bg-transparent p-4">
+    <div className="arc-panel p-4">
       <div className="flex items-center gap-2">
         <p className="mono-label text-[9px] text-[var(--muted)]">{label}</p>
         <span title={detail} aria-label={detail} className="grid h-4 w-4 place-items-center rounded-full border border-white/[0.12] text-[10px] text-[var(--muted)]">i</span>
@@ -453,7 +453,7 @@ function PortfolioMetric({ label, value, detail }: { label: string; value: strin
 
 function PositionPanel({ title, status, value, detail, rows }: { title: string; status: string; value: string; detail: string; rows: Array<[string, string]> }) {
   return (
-    <article className="border border-white/[0.08] bg-transparent p-5">
+    <article className="arc-panel p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <h3 className="text-2xl leading-tight">{title}</h3>

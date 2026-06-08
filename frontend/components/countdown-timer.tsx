@@ -12,8 +12,8 @@ export function CountdownTimer({ date }: { date: string }) {
   }, [date]);
 
   return (
-    <div className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
-      <span className="text-blue-600 dark:text-blue-300">Next window</span>
+    <div className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--foreground)]">
+      <span className="mono-label text-[9px] text-[var(--muted)]">Next window</span>
       <span className="ml-2 font-semibold">{days === null ? "Loading" : days === 0 ? "Open now" : `${days} days`}</span>
     </div>
   );

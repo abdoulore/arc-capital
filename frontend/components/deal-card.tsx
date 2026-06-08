@@ -26,7 +26,7 @@ export function DealCard({ deal, onInvest }: DealCardProps) {
   const progress = deal.targetRaise > 0 ? (deal.raised / deal.targetRaise) * 100 : 0;
 
   return (
-    <article className="border border-white/[0.08] bg-transparent p-6">
+    <article className="arc-panel flex min-h-[330px] flex-col p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="break-words text-2xl leading-tight">{deal.title}</h3>
@@ -43,7 +43,7 @@ export function DealCard({ deal, onInvest }: DealCardProps) {
         </div>
         <ProgressBar value={progress} />
       </div>
-      <dl className="mt-5 grid grid-cols-3 gap-3 text-sm">
+      <dl className="mt-5 grid grid-cols-3 gap-3 border-t border-white/[0.08] pt-5 text-sm">
         <div>
           <dt className="mono-label text-[9px] text-[var(--muted)]">Model</dt>
           <dd className="mt-2 text-[var(--foreground)]">{deal.model}</dd>
@@ -61,14 +61,14 @@ export function DealCard({ deal, onInvest }: DealCardProps) {
         <button
           type="button"
           disabled
-          className="arc-button-outline mt-5 w-full cursor-not-allowed rounded-md px-4 py-3 text-sm opacity-50"
+          className="arc-button-outline mt-auto w-full cursor-not-allowed px-4 py-3 text-sm opacity-50"
         >
           Closed
         </button>
       ) : (
         <WalletGatedButton
           onClick={() => onInvest?.(deal.id)}
-          className="arc-button-outline mt-5 w-full rounded-md px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
+          className="arc-button-outline mt-auto w-full px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
         >
           Review investment
         </WalletGatedButton>

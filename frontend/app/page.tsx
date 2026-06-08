@@ -41,18 +41,18 @@ export default function LandingPage() {
           </p>
           <h1 className="mt-10 max-w-4xl break-words text-4xl leading-[1.04] text-[var(--foreground)] sm:text-6xl lg:text-7xl">
             Real-world yield,{" "}
-            <span className="italic text-[var(--accent)]">without the gatekeepers.</span>
+            <span className="inline-block pb-1 italic leading-[1.12] text-[var(--accent)]">without the gatekeepers.</span>
           </h1>
           <p className="mt-10 max-w-full text-base font-light leading-8 text-[rgba(232,228,220,0.5)] sm:max-w-2xl sm:text-lg">
             Arc Capital brings institutional-grade fixed income to onchain investors. Flexible liquidity windows.
             Long-term fixed returns. Non-custodial throughout.
           </p>
           <div className="mt-12 flex flex-wrap items-center gap-5">
-            <Link href="/vaults" className="arc-button-filled mono-label rounded-md px-6 py-3 text-xs transition hover:opacity-90">
+            <Link href="/vaults" className="arc-button-filled mono-label px-6 py-3 text-xs transition hover:opacity-90">
               Enter app
             </Link>
             <Link href="#products" className="mono-label text-xs text-[var(--muted)] transition hover:text-[var(--foreground)]">
-              {"Read the docs ->"}
+              Read docs
             </Link>
           </div>
         </div>
@@ -101,13 +101,13 @@ export default function LandingPage() {
       <section id="principles" className="grid gap-12 border-b border-white/[0.08] py-24 lg:grid-cols-[0.95fr_1fr] lg:items-center">
         <div>
           <h2 className="max-w-xl break-words text-3xl leading-tight sm:text-5xl">
-            Built for capital that <span className="italic text-[var(--accent)]">demands more.</span>
+            Built for capital that <span className="inline-block pb-1 italic leading-[1.12] text-[var(--accent)]">demands more.</span>
           </h2>
           <p className="mt-10 max-w-xl text-lg font-light leading-8 text-[rgba(232,228,220,0.5)]">
             Traditional private credit is opaque, illiquid, and often reserved for institutions. Arc brings the same yield
             to verifiable onchain infrastructure, with full transparency and no custody risk.
           </p>
-          <Link href="/vaults" className="arc-button-outline mono-label mt-14 inline-flex rounded-md px-6 py-3 text-xs transition">
+          <Link href="/vaults" className="arc-button-outline mono-label mt-14 inline-flex px-6 py-3 text-xs transition">
             Start earning
           </Link>
         </div>
@@ -121,7 +121,7 @@ export default function LandingPage() {
 
       <footer className="flex flex-col justify-between gap-4 py-10 text-[var(--muted)] sm:flex-row">
         <p className="font-display text-xl">Arc Capital</p>
-        <p className="mono-label text-[10px]">Private banking, onchain - © 2026</p>
+        <p className="mono-label text-[10px]">Private banking, onchain. 2026</p>
       </footer>
     </div>
   );
@@ -167,7 +167,7 @@ function ProductCard({
         ))}
       </div>
       <Link href={href} className="mono-label mt-10 inline-flex text-[11px] text-[var(--muted)] transition hover:text-[var(--foreground)]">
-        {`${cta} ->`}
+        {cta}
       </Link>
     </article>
   );

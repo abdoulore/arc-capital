@@ -76,7 +76,6 @@ export default function VaultsPage() {
   const totalSharesAfterWithdraw = totalShares > requestedShares ? totalShares - requestedShares : BigInt(0);
   const withdrawalWindow = getWithdrawalWindow(vault.withdrawalWindowStart, vault.withdrawalWindowDuration, todayMs);
   const monthlyApy = getMonthlyVaultApy(monthlyApySummary);
-  void monthlyApy;
   const penaltyBps = typeof vault.penaltyBps === "bigint" ? Number(vault.penaltyBps) : 0;
   const previewPenalty = withdrawalWindow.isOpen ? 0 : grossWithdraw * (penaltyBps / 10_000);
   const netWithdraw = Math.max(0, grossWithdraw - previewPenalty);
@@ -121,7 +120,7 @@ export default function VaultsPage() {
         description=""
       />
 
-      <section className="grid gap-0 border border-white/[0.08] lg:grid-cols-[1.35fr_0.75fr]">
+      <section className="arc-panel grid gap-0 lg:grid-cols-[1.35fr_0.75fr]">
           <div className="flex min-h-[360px] flex-col justify-between border-b border-white/[0.08] bg-transparent p-8 lg:border-b-0 lg:border-r">
             <div>
               <div className="flex flex-wrap items-start gap-3">
@@ -179,19 +178,19 @@ export default function VaultsPage() {
                 <>
                   <WalletGatedButton
                     onClick={() => setDepositOpen(true)}
-                    className="arc-button-filled flex-1 rounded-md px-4 py-3 text-sm font-medium transition"
+                    className="arc-button-filled flex-1 px-4 py-3 text-sm font-medium transition"
                   >
                     Deposit
                   </WalletGatedButton>
                   <WalletGatedButton
                     onClick={() => setWithdrawOpen(true)}
-                    className="arc-button-outline flex-1 rounded-md px-4 py-3 text-sm font-medium transition"
+                    className="arc-button-outline flex-1 px-4 py-3 text-sm font-medium transition"
                   >
                     Withdraw
                   </WalletGatedButton>
                 </>
               ) : (
-                <WalletGatedButton className="arc-button-outline mx-auto w-full max-w-md rounded-md px-4 py-3 text-sm font-medium transition">
+                <WalletGatedButton className="arc-button-outline mx-auto w-full max-w-md px-4 py-3 text-sm font-medium transition">
                   Connect Wallet
                 </WalletGatedButton>
               )}
@@ -207,19 +206,31 @@ export default function VaultsPage() {
               tone={withdrawalWindow.isOpen ? "green" : "blue"}
             />
             <VaultInfoRow
+              icon="[]"
+              label="Next window"
+              value={getNextWindowText(withdrawalWindow)}
+              detail={withdrawalWindow.isOpen ? "Next monthly liquidity window" : "Upcoming free-withdrawal window"}
+            />
+            <VaultInfoRow
               icon="|||"
               label="Vault liquidity"
               value={hasTotalAssets ? formatTokenAmount(totalAssets, USDC_DECIMALS, "USDC", 2) : ""}
               pending={!hasTotalAssets}
               detail="Live onchain vault assets"
+            />
+            <VaultInfoRow
+              icon="%"
+              label="Yearly APY"
+              value={monthlyApy.value}
+              detail={monthlyApy.detail}
               isLast
             />
           </div>
       </section>
 
       <section className="mt-6">
-        <h2 className="mb-5 text-3xl leading-tight">Long-term fixed income</h2>
-        <div className="border border-white/[0.08] bg-transparent p-8">
+        <h2 className="mb-5 text-3xl leading-tight sm:text-4xl">Long-term fixed income</h2>
+        <div className="arc-panel p-8">
           <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
             <div>
               <label className="text-sm font-medium text-[var(--muted)]" htmlFor="fixed-income-amount">
@@ -230,7 +241,7 @@ export default function VaultsPage() {
                 value={fixedAmount}
                 onChange={(event) => setFixedAmount(event.target.value)}
                 disabled={!walletConnected}
-                className="mt-2 w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 text-lg font-light outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="arc-field mt-2 w-full px-4 py-3 text-lg font-light disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder={walletConnected ? "USDC amount" : "Awaiting wallet connection"}
               />
 
@@ -257,7 +268,7 @@ export default function VaultsPage() {
                       type="button"
                       onClick={() => setSelectedDurationIndex(index)}
                       disabled={!walletConnected}
-                      className={`rounded-none border px-3 py-2 text-sm font-light transition ${
+                      className={`border px-3 py-2 text-sm font-light transition ${
                         selectedDurationIndex === index
                           ? "border-[var(--accent)] bg-transparent text-[var(--foreground)]"
                           : "border-[var(--line)] text-[var(--muted)] hover:border-white/20"
@@ -272,12 +283,12 @@ export default function VaultsPage() {
               <p className="mt-5 text-sm text-[var(--muted)]">Early withdrawals may reduce returns</p>
             </div>
 
-            <div className="border border-white/[0.08] bg-transparent p-6 text-[var(--foreground)]">
+            <div className="arc-panel p-6 text-[var(--foreground)]">
               <p className="text-sm text-[var(--muted)]">Fixed APY</p>
               <div className="mt-2 text-5xl text-[var(--accent)]">{formatPercent(selectedFixedOption.apy)}</div>
               <p className="mt-2 text-sm text-[var(--muted)]">{selectedFixedOption.description}</p>
               {!selectedFixedOption.isLive ? (
-                <p className="mt-1 text-xs text-[var(--muted)]">Using configured V2 terms while live tranche data loads.</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">Live term data is still syncing.</p>
               ) : null}
 
               <div className="mt-5 space-y-3 text-sm">
@@ -293,7 +304,7 @@ export default function VaultsPage() {
                   if (ok) setFixedAmount("");
                 }}
                 disabled={!selectedFixedOption.enabled || longTermBusy}
-                className={`${walletConnected ? "arc-button-filled" : "arc-button-outline"} mt-5 w-full rounded-md px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50`}
+                className={`${walletConnected ? "arc-button-filled" : "arc-button-outline"} mt-5 w-full px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {longTermButtonLabel}
               </WalletGatedButton>
@@ -342,7 +353,6 @@ export default function VaultsPage() {
             ["Estimated net received", hasPendingWithdraw ? formatTokenAmount(pendingWithdrawRaw, USDC_DECIMALS, "USDC", 2) : formatCurrency(netWithdraw)],
             ["Penalty amount", hasPendingWithdraw ? "Calculated on execution" : formatCurrency(previewPenalty), withdrawalWindow.isOpen ? "No penalty while the withdrawal window is open." : "Fee applied outside the free withdrawal window."],
             ["Withdrawal window", withdrawalWindow.label, withdrawalWindow.isOpen ? "Free withdrawals are available now." : "Free withdrawals are only available during the monthly window."],
-            ["Estimated gas", "Awaiting Wallet Estimate", "Estimated network fee."],
             ["Remaining shares", hasPendingWithdraw ? "Already reserved" : formatTokenAmount(remainingShares, SHARE_DECIMALS, "shares", 4)],
           ]}
           warning={hasPendingWithdraw ? "You already have a pending withdrawal request. Execute it to send USDC to your wallet before starting another withdrawal." : withdrawalWindow.isOpen ? "The withdrawal window is open. This preview applies no penalty." : "USDC is sent directly to your wallet after confirmation. Outside the monthly window, a penalty is applied and redistributed to remaining shareholders."}
@@ -375,7 +385,7 @@ function getMonthlyVaultApy(summary: MonthlyApySummary | null) {
     value: summary.routedYield === "0" ? "Awaiting Live Data" : formatPercent(Number(summary.apyBps || "0") / 100),
     detail:
       summary.routedYield === "0"
-        ? "Yield appears after treasury distributions are routed to the vault"
+        ? "Yield appears after live yield history is available"
         : `Annualized from ${formatTokenAmount(safeBigInt(summary.routedYield), USDC_DECIMALS, "USDC", 2)} routed yield over ${summary.basisDays} days`,
   };
 }
@@ -431,6 +441,14 @@ function getWindowTimingText(window: { countdownDate: Date | null; isOpen: boole
   const diffMs = Math.max(0, window.countdownDate.getTime() - Date.now());
   const days = Math.max(1, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
   return window.isOpen ? `Window closes in ${days} day${days === 1 ? "" : "s"}` : `Next window in ${days} day${days === 1 ? "" : "s"}`;
+}
+
+function getNextWindowText(window: { nextWindowDate: Date | null; countdownDate: Date | null; isOpen: boolean; label: string }) {
+  const target = window.nextWindowDate ?? window.countdownDate;
+  if (!target) return window.label === "Schedule pending" ? "Schedule pending" : "Awaiting Live Data";
+  const diffMs = Math.max(0, target.getTime() - Date.now());
+  const days = Math.max(1, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
+  return `${days} day${days === 1 ? "" : "s"}`;
 }
 
 function VaultInfoRow({
@@ -521,9 +539,9 @@ function TransactionForm({
         onChange={(event) => onChange(event.target.value)}
         disabled={inputDisabled}
         placeholder="0.00"
-        className="w-full rounded-none border border-[var(--line)] bg-transparent px-4 py-3 text-lg font-light outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="arc-field w-full px-4 py-3 text-lg font-light disabled:cursor-not-allowed disabled:opacity-50"
       />
-      <div className="mt-4 rounded-md border border-[var(--line)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
+      <div className="mt-4 border border-[var(--line)] bg-transparent p-3 text-sm text-[var(--foreground)]">
         {preview.map(([label, content, tooltip]) => (
           <div key={label} className="flex justify-between gap-4 py-1.5">
             <span className="inline-flex items-center gap-1 text-[var(--muted)]">
@@ -538,9 +556,9 @@ function TransactionForm({
           </div>
         ))}
       </div>
-      {warning ? <div className="mt-3 border border-[var(--line)] p-3 text-sm font-light text-[var(--muted)]">{warning}</div> : null}
+      {warning ? <div className="mt-3 border border-[var(--line)] p-3 text-sm font-light leading-6 text-[var(--muted)]">{warning}</div> : null}
       {advanced?.length ? (
-        <div className="mt-3 rounded-md border border-[var(--line)]">
+        <div className="mt-3 border border-[var(--line)]">
           <button
             type="button"
             onClick={() => setAdvancedOpen((open) => !open)}
@@ -564,7 +582,7 @@ function TransactionForm({
       <WalletGatedButton
         onClick={onSubmit}
         disabled={busy}
-        className="arc-button-filled mt-5 w-full rounded-md px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+        className="arc-button-filled mt-5 w-full px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? "Confirming..." : status === "confirmed" ? "Confirmed" : primaryLabel}
       </WalletGatedButton>

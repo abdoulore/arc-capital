@@ -108,7 +108,7 @@ export default function MarketplacePage() {
       />
 
       {!marketplace.address ? (
-        <div className="mb-5 border border-white/[0.08] bg-transparent p-4 text-sm text-[var(--muted)]">
+        <div className="arc-panel mb-5 p-4 text-sm text-[var(--muted)]">
           <p className="text-lg text-[var(--foreground)]">Connect Wallet</p>
           <p className="mt-1">
             Connect your wallet to create listings, trade deal shares, or manage your orders.
@@ -116,8 +116,8 @@ export default function MarketplacePage() {
         </div>
       ) : null}
 
-      <section className="border border-white/[0.08] bg-transparent p-6">
-        {marketplace.transaction.status !== "idle" ? (
+      <section className="arc-panel p-6">
+        {marketplace.transaction.status === "pending" || marketplace.transaction.status === "confirmed" ? (
           <div className="mb-4 border border-white/[0.08] bg-transparent p-3 text-sm text-[var(--muted)]">
             {marketplace.transaction.label}
           </div>
@@ -127,7 +127,7 @@ export default function MarketplacePage() {
             <h2 className="text-2xl">Live orderbook</h2>
             <p className="mt-1 text-sm font-light text-[var(--muted)]">Yield rights transfer with ownership.</p>
           </div>
-          <WalletGatedButton onClick={() => setListingOpen(true)} className="arc-button-outline rounded-md px-4 py-3 text-sm transition">
+          <WalletGatedButton onClick={() => setListingOpen(true)} className="arc-button-outline px-4 py-3 text-sm transition">
             Create listing
           </WalletGatedButton>
         </div>
@@ -135,7 +135,7 @@ export default function MarketplacePage() {
           <div className="border-t border-white/[0.08] py-6 text-sm text-[var(--muted)]">No active listings.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="arc-table min-w-[760px]">
               <thead className="border-b border-white/[0.08] text-[var(--muted)]">
                 <tr>
                   <th className="mono-label py-3 text-[10px] font-normal">Deal</th>
@@ -155,7 +155,7 @@ export default function MarketplacePage() {
                     <td className="py-4">{formatTokenAmount(row.priceRaw, 6, "USDC", 2)}</td>
                     <td className="py-4">{formatTokenAmount(row.volumeRaw, 6, "USDC", 2)}</td>
                     <td className="py-4">
-                      <WalletGatedButton onClick={() => setSelectedListing(row)} className="arc-button-outline rounded-md px-3 py-2 text-sm transition">
+                      <WalletGatedButton onClick={() => setSelectedListing(row)} className="arc-button-outline px-3 py-2 text-sm transition">
                         Trade
                       </WalletGatedButton>
                     </td>
@@ -168,13 +168,13 @@ export default function MarketplacePage() {
       </section>
 
       {marketplace.address ? (
-      <section className="mt-6 border border-white/[0.08] bg-transparent p-6">
+      <section className="arc-panel mt-6 p-6">
         <div className="mb-4">
           <h2 className="text-2xl">Your orders</h2>
           <p className="mt-1 text-sm font-light text-[var(--muted)]">Open listings created by your connected wallet. Canceling returns unsold shares to your wallet.</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="arc-table min-w-[760px]">
             <thead className="border-b border-white/[0.08] text-[var(--muted)]">
               <tr>
                 <th className="mono-label py-3 text-[10px] font-normal">Deal</th>
@@ -201,7 +201,7 @@ export default function MarketplacePage() {
                         if (ok) refreshListings();
                       }}
                       disabled={marketplace.transaction.status === "pending"}
-                      className="rounded-md border border-white/[0.18] px-3 py-2 text-sm text-[var(--foreground)] transition hover:border-white/[0.32] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="arc-button-outline px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Cancel
                     </button>
@@ -213,7 +213,7 @@ export default function MarketplacePage() {
         </div>
       </section>
       ) : (
-        <section className="mt-6 border border-white/[0.08] bg-transparent p-6">
+        <section className="arc-panel mt-6 p-6">
           <h2 className="text-2xl">Your orders</h2>
           <p className="mt-3 text-sm text-[var(--muted)]">Connect your wallet to view open orders.</p>
         </section>
@@ -230,7 +230,7 @@ export default function MarketplacePage() {
                 </p>
               </div>
               <WalletGatedButton
-                className="arc-button-outline mt-5 w-full rounded-md px-4 py-3 text-sm transition"
+                className="arc-button-outline mt-5 w-full px-4 py-3 text-sm transition"
               >
                 Create listing
               </WalletGatedButton>
@@ -246,7 +246,7 @@ export default function MarketplacePage() {
               <button
                 type="button"
                 disabled
-                className="arc-button-outline mt-5 w-full cursor-not-allowed rounded-md px-4 py-3 text-sm opacity-50"
+                className="arc-button-outline mt-5 w-full cursor-not-allowed px-4 py-3 text-sm opacity-50"
               >
                 Create listing unavailable
               </button>
@@ -263,7 +263,7 @@ export default function MarketplacePage() {
                   setSelectedDealAddress(event.target.value);
                   setFormError(null);
                 }}
-                className="mt-2 w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 outline-none focus:border-[var(--accent)]"
+                className="arc-field mt-2 w-full px-4 py-3"
               >
                 <option value="">Select deal</option>
                 {dealHoldings.map((holding) => (
@@ -277,13 +277,13 @@ export default function MarketplacePage() {
                   value={listingAmount}
                   onChange={(event) => setListingAmount(event.target.value)}
                   placeholder="Shares to sell"
-                  className="w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 outline-none focus:border-[var(--accent)]"
+                  className="arc-field w-full px-4 py-3"
                 />
                 <input
                   value={listingPrice}
                   onChange={(event) => setListingPrice(event.target.value)}
                   placeholder="Price per share"
-                  className="w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 outline-none focus:border-[var(--accent)]"
+                  className="arc-field w-full px-4 py-3"
                 />
               </div>
               <div className="mt-4 border border-white/[0.08] bg-transparent p-4 text-sm">
@@ -323,7 +323,7 @@ export default function MarketplacePage() {
                   }
                 }}
                 disabled={marketplace.transaction.status === "pending"}
-                className="arc-button-filled mt-5 w-full rounded-md px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
+                className="arc-button-filled mt-5 w-full px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {marketplace.transaction.status === "pending" ? "Confirming..." : marketplace.transaction.status === "confirmed" ? "Confirmed" : "Create listing"}
               </WalletGatedButton>
@@ -344,7 +344,7 @@ export default function MarketplacePage() {
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="Shares to fill"
-              className="mt-4 w-full rounded-none border border-white/[0.08] bg-transparent px-4 py-3 outline-none focus:border-[var(--accent)]"
+              className="arc-field mt-4 w-full px-4 py-3"
             />
             <div className="mt-4 border border-white/[0.08] bg-transparent p-4 text-sm">
               <PreviewRow label="Total cost" value={formatCurrency(totalCost)} />
@@ -370,7 +370,7 @@ export default function MarketplacePage() {
                 }
               }}
               disabled={marketplace.transaction.status === "pending"}
-              className="arc-button-filled mt-5 w-full rounded-md px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
+              className="arc-button-filled mt-5 w-full px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               {marketplace.transaction.status === "pending" ? "Confirming..." : marketplace.transaction.status === "confirmed" ? "Confirmed" : "Confirm trade"}
             </WalletGatedButton>

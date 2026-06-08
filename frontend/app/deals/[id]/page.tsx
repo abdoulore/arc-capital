@@ -6,12 +6,12 @@ import { SectionHeader } from "@/components/section-header";
 export default function DealDetailPage() {
   return (
     <div>
-      <Link href="/deals" className="mb-4 inline-flex text-sm font-medium text-blue-600 dark:text-blue-400">
+      <Link href="/deals" className="arc-link mb-4 inline-flex text-sm font-medium">
         Back to deals
       </Link>
       <SectionHeader eyebrow="Deal detail" title="Awaiting Live Data" description="Deal detail indexing is pending integration." />
 
-      <section className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-6 text-sm text-[var(--muted)] shadow-sm">
+      <section className="arc-panel p-6 text-sm text-[var(--muted)]">
         Pending Integration
       </section>
     </div>
